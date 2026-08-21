@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8">
+		<title>Intonation Coach</title>
+		<link rel="shortcut icon" href="../intonationCoach/Kiwi-bird-blue.png">
+		<link rel="stylesheet" href="./intonationCoach/intonationCoach.css">
+	</head>
+	<body>
+		<div class="container">
+			<h2>Intonation Coach <span class="subtitle"> Powered by SwiftF0 pitch estimator</span></h2>
+			<!-- Controls -->
+			<div class="controls">
+				<input type="file" id="audioFile" accept="audio/*">
+				<button id="playPauseBtn" disabled>再生 / 停止</button>
+				<button id="zoomInBtn" disabled>拡大 (+)</button>
+				<button id="zoomOutBtn" disabled>縮小 (-)</button>
+				<button id="resetZoomBtn" disabled>全体表示リセット</button>
+				<button id="extractBtn" disabled>選択範囲を切り出し＆分析</button>
+			</div>
+			<div id="status">モデルを初期化中...</div>
+			<!-- Oscillogram -->
+			<div class="section-header">
+				<div style="display: flex; gap: 10px; align-items: center;">
+					<h3 id="HeaderOscillogram">オシログラム</h3>
+					<button id="scrollLeftBtn" disabled>◀</button>
+					<button id="scrollRightBtn" disabled>▶</button>
+				</div>
+			</div>
+			<canvas id="waveformCanvas" style="height: 200px;"></canvas>
+			<!-- SwiftF0 ピッチ分析結果描画用キャンバス ＆ 信頼度スライダー -->
+			<div class="section-header">
+				<div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+					<h3 id="HeaderPitchChart">SwiftF0 ピッチ分析結果 (Hz)</h3>
+					<button id="pitchPlayPauseBtn" disabled>分析範囲 再生 / 停止</button>
+					<button id="recordBtn" class="record-btn" disabled>🎤 マイク録音 (長押し)</button>
+					<button id="micPlayPauseBtn" disabled>マイク録音 再生 / 停止</button>
+				</div>
+			</div>
+			<div class="pitch-controls-row">
+				<span class="legend"><span class="swatch swatch-file"></span><span id="legend01">ファイル分析</span></span>
+				<div class="pitch-controls">
+					<label id="confLabel" for="confThreshold" title="クリックしてデフォルト値(0.90)に戻す">信頼度 ≧: </label>
+					<span id="confValue"></span>
+					<input type="range" id="confThreshold" min="0" max="0.99" step="0.01" value="0.90">
+				</div>
+				<span class="legend"><span class="swatch swatch-mic"></span><span id="legend02">マイク録音</span></span>
+				<div class="pitch-controls">
+					<label id="confLabelMic" for="confThresholdMic" title="クリックしてデフォルト値(0.90)に戻す">信頼度 ≧: </label>
+					<span id="confValueMic"></span>
+					<input type="range" id="confThresholdMic" min="0" max="0.99" step="0.01" value="0.90">
+				</div>
+			</div>
+			<canvas id="pitchCanvas"></canvas>
+			<div style="display: flex; gap: 20px; align-items: center;">
+				<button id="outputWavBtn" disabled>WAVファイル出力</button>
+				<button id="outputCsvBtn" disabled>F<sub>0</sub>情報（CSV）出力</button>
+			</div>
+			<footer class="footer" id="footer">SwiftF0 by Lars Nieradzik (MIT License) · 音声はブラウザ内でのみ処理され、外部へは送信されません。</footer>
+		</div>
+		<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+		<script type="module" src="./intonationCoach/intonationCoach.js"></script>
+	</body>
+</html>

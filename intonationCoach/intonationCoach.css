@@ -1,0 +1,135 @@
+body {
+	font-family: sans-serif;
+	margin: 20px;
+	background: #121212;
+	color: #fff;
+}
+.container {
+	max-width: 900px;
+	margin: auto;
+}
+h2 .subtitle {
+	font-size: 0.55em;
+	font-weight: normal;
+	color: #aaa;
+	margin-left: 8px;
+}
+canvas {
+	background: #1e1e1e;
+	border: 1px solid #444;
+	width: 100%;
+	display: block;
+	margin-bottom: 5px;
+}
+#waveformCanvas {
+	height: 180px;
+	cursor: crosshair;
+}
+#pitchCanvas {
+	height: 220px;
+	margin-bottom: 10px;
+	touch-action: none;		/* マイク録音のドラッグ操作中にスクロール等が起きないように */
+	user-select: none;
+}
+.controls {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 15px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 20px;
+	margin-bottom: 5px;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+h3 {
+	margin: 0;
+	font-size: 1.1em;
+	color: #ddd;
+	}
+.pitch-controls-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin-bottom: 5px;
+}
+.pitch-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9em;
+	color: #aaa;
+}
+.pitch-controls label {
+	cursor: pointer;
+	user-select: none;
+}
+.pitch-controls label:hover {
+	color: #fff;
+	text-decoration: underline;
+}
+button, input[type="file"] {
+	padding: 8px 12px;
+	background: #333;
+	color: #fff;
+	border: 1px solid #555;
+	cursor: pointer;
+	border-radius: 4px;
+}
+button:hover {
+	background: #444;
+}
+button:disabled, input:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+input[type="range"] {
+	cursor: pointer;
+}
+#status {
+	font-size: 0.9em;
+	color: #aaa;
+	margin-bottom: 15px;
+}
+.footer {
+	position: fixed;
+	bottom: 0;
+	font-size: 0.8em;
+	color: lightGray;
+}
+
+.record-btn {
+	touch-action: none;		/* 長押し中にスマホでスクロール等が起きないように */
+	user-select: none;
+}
+.record-btn.active {
+	background: #a33;
+	border-color: #d55;
+	color: #fff;
+}
+
+.legend {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 0.85em;
+	color: #aaa;
+}
+.swatch {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	display: inline-block;
+}
+.swatch-file {
+	background: #4af;
+}
+.swatch-mic {
+	background: #fa4;
+}

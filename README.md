@@ -7,6 +7,9 @@
 * ピッチの推定は、SwiftF0という畳み込みニューラルネットワーク（CNN）を使用しています。
 * 音声処理はすべてブラウザ内で行われ、外部サーバーには送信されません（音声データはすべてメモリ上に展開されます...このため大きなファイルは不得手です）。
 
+## 実行URL
+* [https://mmurak.github.io/speechLab/intonationCoach.html](https://mmurak.github.io/speechLab/intonationCoach.html)
+
 ## 使い方
 ### 音声ファイルの入力、再生
 1. ［ファイル選択］ボタンを押し、読み込ませたいファイルを指定する。→読み込みが完了するとオシログラムが表示されます。

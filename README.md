@@ -43,3 +43,8 @@
 ## 技術情報、その他
 * ピッチ推定アルゴリズムは、SwiftF0を採用し、ONNX+ORTを使用して実装しています。
 * AI生成によるコードを一部使用しています（内容は検証済み）。
+* URLパラメータに lang=eng を追加するとメッセージが英語化されます。
+
+## ライセンス
+* 本アプリはMITライセンスであり、アプリ内ではLars Nieradzik氏の[SwiftF0](https://github.com/lars76/swift-f0/)、およびMicrosoftの[ONNX Runtime](https://github.com/microsoft/onnxruntime)を使用しています。
+  

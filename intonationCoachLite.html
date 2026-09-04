@@ -115,6 +115,7 @@ input[type="range"] {
 	margin-bottom: 6px;
 }
 #pitchChartScrollContainer {
+	position: relative;
 	flex: 1 1 auto;
 	min-width: 0;
 	overflow-x: auto;
@@ -140,25 +141,22 @@ input[type="range"] {
 #pitchChartScrollContainer::-webkit-scrollbar-thumb:hover {
 	background: #999;
 }
-#pitchPlotWrapper {
-	position: relative;
-	height: 280px;
+/* スクロール可能な範囲（音声の総時間ぶん）だけを確保するための透明なスペーサー。
+   実際に描画するキャンバスはこの上に固定サイズで重ねて表示する（仮想スクロール）。 */
+#pitchScrollSpacer {
+	height: 1px;
 }
-#pitchCanvas, #cursorCanvas {
+#pitchPlotWrapper {
 	position: absolute;
 	top: 0;
 	left: 0;
-	display: block;
-	height: 280px;
+	will-change: transform;
 }
 #pitchCanvas {
+	display: block;
 	touch-action: none;		/* マイク録音位置のドラッグ操作中にスクロール等が起きないように */
 	user-select: none;
 	cursor: default;
-}
-#cursorCanvas {
-	/* カーソル専用の透過レイヤー。クリック/ドラッグは下のpitchCanvasに通す */
-	pointer-events: none;
 }
 .record-btn {
 	flex: 0 0 auto;
@@ -235,9 +233,9 @@ input[type="range"] {
 			<!-- 4行目: チャート + 録音ボタン -->
 			<div class="chart-row">
 				<div id="pitchChartScrollContainer">
+					<div id="pitchScrollSpacer"></div>
 					<div id="pitchPlotWrapper">
 						<canvas id="pitchCanvas"></canvas>
-						<canvas id="cursorCanvas"></canvas>
 					</div>
 				</div>
 				<button id="recordBtn" class="record-btn" disabled>🔴録音</button>

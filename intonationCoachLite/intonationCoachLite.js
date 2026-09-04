@@ -23,6 +23,7 @@ const pitchFMax = 800;				// ピッチチャートの描画周波数上限
 const DEFAULT_CONF = 0.90;			// 信頼度のデフォルト値
 const PIXELS_PER_SECOND = 140;		// ピッチチャートの横スクロール解像度（詰め込み表示にしない）
 const PLOT_ORIGIN_X = 40;			// 左側の周波数目盛りぶんの余白(px)
+const WINDOW_BUFFER_SEC = 0.5;		// 可視範囲の前後に余分に描画しておく秒数（端でのポップインを防ぐ）
 
 // SwiftF0 ORT周りの変数
 let session = null;
@@ -56,9 +57,9 @@ class UserInterfaceWidgets {
 		this.fileSpeedSlider = document.getElementById('fileSpeedSlider');
 		this.fileSpeedValue = document.getElementById('fileSpeedValue');
 		this.pitchScrollContainer = document.getElementById('pitchChartScrollContainer');
+		this.pitchScrollSpacer = document.getElementById('pitchScrollSpacer');
 		this.pitchPlotWrapper = document.getElementById('pitchPlotWrapper');
 		this.pitchCanvas = document.getElementById('pitchCanvas');
-		this.cursorCanvas = document.getElementById('cursorCanvas');
 		this.statusDiv = document.getElementById('status');
 		this.recordBtn = document.getElementById('recordBtn');
 		this.micPlayPauseBtn = document.getElementById('micPlayPauseBtn');
@@ -108,17 +109,18 @@ const getFileTime = createSmoothedClock(audioEl);
 const getMicTime = createSmoothedClock(micAudioEl);
 
 // 描画用コンテキスト
-// pitchCtx: 音高の点群や目盛りなど「重い・頻繁には変わらない」描画（静的レイヤー）
-// cursorCtx: 再生カーソルの線のみを描く「軽い・毎フレーム更新する」描画（動的レイヤー）
 const pitchCtx = UI.pitchCanvas.getContext('2d');
-const cursorCtx = UI.cursorCanvas.getContext('2d');
-
-// カーソルの部分再描画のために、直前に描画したカーソルのx座標を記憶しておく
-let lastFileCursorX = null;
-let lastMicCursorX = null;
 
 /* ********************************************************************************
- * キャンバスのサイズ変更関連
+ * ピッチチャートのレイアウト・仮想スクロール
+ * ---------------------------------------------------------------------------
+ * 長い音声でも重くならないよう、キャンバス自体は常に「表示領域と同じ小さな
+ * 固定サイズ」のままにし、音声全体ぶんの横スクロールは透明なスペーサー要素
+ * (#pitchScrollSpacer)に受け持たせる。キャンバスを乗せた#pitchPlotWrapperは
+ * スクロール位置ぶんだけCSSのtransformで逆方向にずらし、常に表示領域の左上に
+ * 重なって見えるようにする（仮想スクロール）。
+ * 描画時も、現在の可視時間範囲に該当するデータだけをインデックス計算で絞り
+ * 込んでから描くため、音声がどれだけ長くても毎回の描画コストはほぼ一定になる。
  * ********************************************************************************/
 function computeTotalDuration() {
 	const fileDur = fileAnalysisData ? fileAnalysisData.duration : 0;
@@ -126,59 +128,63 @@ function computeTotalDuration() {
 	return Math.max(fileDur, micEnd, 1.0);
 }
 
-function resizeCanvases() {
+function timeToX(t) {
+	return PLOT_ORIGIN_X + t * PIXELS_PER_SECOND;
+}
+
+// キャンバス（表示領域と同じ小さいサイズ）とスペーサー（音声全体ぶんの幅）を
+// 必要に応じて再設定し、現在のスクロール位置に合わせて再描画する。
+function layoutAndRender() {
 	const containerHeight = UI.pitchScrollContainer.clientHeight || 280;
 	const containerWidth = UI.pitchScrollContainer.clientWidth || 300;
 	const totalDuration = computeTotalDuration();
-	const cssWidth = Math.max(containerWidth, PLOT_ORIGIN_X + totalDuration * PIXELS_PER_SECOND);
+	const spacerWidth = Math.max(containerWidth, PLOT_ORIGIN_X + totalDuration * PIXELS_PER_SECOND);
 	const dpr = window.devicePixelRatio || 1;
 
-	UI.pitchPlotWrapper.style.width = cssWidth + 'px';
+	UI.pitchScrollSpacer.style.width = spacerWidth + 'px';
+
+	UI.pitchPlotWrapper.style.width = containerWidth + 'px';
 	UI.pitchPlotWrapper.style.height = containerHeight + 'px';
 
-	for (const [canvas, ctx] of [[UI.pitchCanvas, pitchCtx], [UI.cursorCanvas, cursorCtx]]) {
-		canvas.style.width = cssWidth + 'px';
-		canvas.style.height = containerHeight + 'px';
-		canvas.width = Math.round(cssWidth * dpr);
-		canvas.height = Math.round(containerHeight * dpr);
-		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-	}
+	UI.pitchCanvas.style.width = containerWidth + 'px';
+	UI.pitchCanvas.style.height = containerHeight + 'px';
+	UI.pitchCanvas.width = Math.round(containerWidth * dpr);
+	UI.pitchCanvas.height = Math.round(containerHeight * dpr);
+	pitchCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-	// キャンバスの座標系が変わったので、カーソルの部分クリア用の記憶をリセットする
-	lastFileCursorX = null;
-	lastMicCursorX = null;
-
-	if (fileAnalysisData || micAnalysisData) {
-		drawStaticChart();
-	} else {
-		clearStaticChart();
-	}
-	drawCursors();
+	syncWrapperTransform();
+	render();
 }
-resizeCanvases();
-
-// マイク波形のドラッグ中など、キャンバス全体のリサイズが不要な場合の軽量な再描画。
-// 総時間が伸びてキャンバス幅そのものを広げる必要がある時だけ resizeCanvases() にフォールバックする。
-function refreshChartAfterMicOffsetChange() {
-	const containerWidth = UI.pitchScrollContainer.clientWidth || 300;
-	const totalDuration = computeTotalDuration();
-	const neededWidth = Math.max(containerWidth, PLOT_ORIGIN_X + totalDuration * PIXELS_PER_SECOND);
-	const currentWidth = UI.pitchPlotWrapper.clientWidth;
-	if (Math.abs(neededWidth - currentWidth) > 1) {
-		resizeCanvases();
-	} else {
-		drawStaticChart();
-		drawCursors();
-	}
-}
+layoutAndRender();
 
 let resizeTimeoutId = null;
 function scheduleResize() {
 	clearTimeout(resizeTimeoutId);
-	resizeTimeoutId = setTimeout(resizeCanvases, 100);
+	resizeTimeoutId = setTimeout(layoutAndRender, 100);
 }
 const resizeObserver = new ResizeObserver(scheduleResize);
 resizeObserver.observe(UI.pitchScrollContainer);
+
+// プロット用ラッパーを、現在のスクロール位置ぶんだけ逆方向にずらして、常に
+// 表示領域の左上に重なって見えるようにする（＝キャンバスは仮想的に「固定」）。
+function syncWrapperTransform() {
+	UI.pitchPlotWrapper.style.transform = 'translateX(' + UI.pitchScrollContainer.scrollLeft + 'px)';
+}
+
+// スクロール位置を指定し、対応する見た目の追従・再描画まで行う。
+function setScrollLeftAndRender(target) {
+	const container = UI.pitchScrollContainer;
+	const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+	container.scrollLeft = Math.max(0, Math.min(maxScrollLeft, target));
+	syncWrapperTransform();
+	render();
+}
+
+// ユーザーが手動でスクロールバーをドラッグ／スワイプした場合の追従・再描画。
+UI.pitchScrollContainer.addEventListener('scroll', () => {
+	syncWrapperTransform();
+	render();
+});
 
 /* ********************************************************************************
  * confidence UI関連
@@ -186,24 +192,24 @@ resizeObserver.observe(UI.pitchScrollContainer);
 UI.confThresholdInput.addEventListener('input', (e) => {
 	const val = parseFloat(e.target.value);
 	UI.confValueSpan.textContent = val.toFixed(2);
-	if (fileAnalysisData || micAnalysisData) drawStaticChart();
+	render();
 });
 UI.confLabel.addEventListener('click', () => {
 	UI.confThresholdInput.value = DEFAULT_CONF;
 	UI.confValueSpan.textContent = DEFAULT_CONF.toFixed(2);
-	if (fileAnalysisData || micAnalysisData) drawStaticChart();
+	render();
 });
 UI.confLabel.title = LITERALS.get('confTips');
 
 UI.confThresholdMicInput.addEventListener('input', (e) => {
 	const val = parseFloat(e.target.value);
 	UI.confValueMicSpan.textContent = val.toFixed(2);
-	if (fileAnalysisData || micAnalysisData) drawStaticChart();
+	render();
 });
 UI.confLabelMic.addEventListener('click', () => {
 	UI.confThresholdMicInput.value = DEFAULT_CONF;
 	UI.confValueMicSpan.textContent = DEFAULT_CONF.toFixed(2);
-	if (fileAnalysisData || micAnalysisData) drawStaticChart();
+	render();
 });
 UI.confLabelMic.title = LITERALS.get('confTips');
 UI.confValueSpan.textContent = DEFAULT_CONF.toFixed(2);
@@ -291,11 +297,11 @@ UI.fileInput.addEventListener('change', async (e) => {
 	decoded = null;
 	decodeCtx.close();
 
-	resizeCanvases();
+	layoutAndRender();
 	if (fileAnalysisData) {
 		UI.playPauseBtn.disabled = false;
 		UI.fileSpeedSlider.disabled = false;
-		UI.pitchScrollContainer.scrollLeft = 0; // 読み込み直後はチャートの先頭(左端)を表示する
+		setScrollLeftAndRender(0); // 読み込み直後はチャートの先頭(左端)を表示する
 	}
 });
 
@@ -356,32 +362,29 @@ async function analyzeFullBuffer(buffer) {
 }
 
 /* ********************************************************************************
- * ピッチチャートの描画
- * ---------------------------------------------------------------------------
- * スマホ等の非力な環境でも再生カーソルが遅れないよう、描画を2枚のキャンバスに
- * 分けている。
- *   pitchCanvas（静的レイヤー）: 目盛りと音高の点群。分析結果・信頼度・
- *     マイク位置のドラッグなど「状態が変わった時」だけ全体を再描画する。
- *     点の数が多い（長い音声）ほど重いが、毎フレーム描く必要はない。
- *   cursorCanvas（動的レイヤー）: 再生カーソルの線のみ。再生中は毎フレーム
- *     更新する必要があるが、前回線を引いた場所の周辺だけを消して描き直す
- *     ことで、音声の長さに関わらず一定の軽さで動作する。
+ * ピッチチャートの描画（現在の可視範囲だけを描く）
  * ********************************************************************************/
-function clearStaticChart() {
-	const w = UI.pitchCanvas.clientWidth;
-	const h = UI.pitchCanvas.clientHeight;
-	pitchCtx.fillStyle = '#1e1e1e';
-	pitchCtx.fillRect(0, 0, w, h);
+
+// 可視時間範囲に対応するpitchData配列のインデックス範囲を計算する。
+// フレームiの時刻はiに比例するので、時刻からインデックスへ直接逆算でき、
+// 全データを走査する必要がない（音声が長くてもコストが変わらない理由）。
+function computeVisibleIndexRange(analysisData, timeShift, scrollLeft, canvasWidthCss) {
+	const localTimeMin = (scrollLeft - PLOT_ORIGIN_X) / PIXELS_PER_SECOND - timeShift - WINDOW_BUFFER_SEC;
+	const localTimeMax = (scrollLeft + canvasWidthCss - PLOT_ORIGIN_X) / PIXELS_PER_SECOND - timeShift + WINDOW_BUFFER_SEC;
+
+	let iStart = Math.floor((localTimeMin * TARGET_SR - CENTER_OFFSET) / HOP_LENGTH) - 1;
+	let iEnd = Math.ceil((localTimeMax * TARGET_SR - CENTER_OFFSET) / HOP_LENGTH) + 1;
+
+	iStart = Math.max(0, iStart);
+	iEnd = Math.min(analysisData.pitchData.length - 1, iEnd);
+	return [iStart, iEnd];
 }
 
-function timeToX(t) {
-	return PLOT_ORIGIN_X + t * PIXELS_PER_SECOND;
-}
-
-// 目盛りと音高の点群を描画する（重い処理。状態が変わった時だけ呼ぶ）
-function drawStaticChart() {
+function render() {
 	const width = UI.pitchCanvas.clientWidth;
 	const height = UI.pitchCanvas.clientHeight;
+	const scrollLeft = UI.pitchScrollContainer.scrollLeft;
+
 	pitchCtx.fillStyle = '#1e1e1e';
 	pitchCtx.fillRect(0, 0, width, height);
 
@@ -401,13 +404,12 @@ function drawStaticChart() {
 		pitchCtx.fillText(hz + 'Hz', 5, y + 4);
 	});
 
-	if (!fileAnalysisData && !micAnalysisData) return;
-
 	function plotSeries(analysisData, color, minConf, timeShift) {
 		if (!analysisData) return;
 		const { pitchData, confData, duration } = analysisData;
+		const [iStart, iEnd] = computeVisibleIndexRange(analysisData, timeShift, scrollLeft, width);
 		pitchCtx.fillStyle = color;
-		for (let i = 0; i < pitchData.length; i++) {
+		for (let i = iStart; i <= iEnd; i++) {
 			const hz = pitchData[i];
 			const conf = confData ? confData[i] : 1.0;
 			if (conf < minConf || hz < fmin || hz > fmax) continue;
@@ -418,7 +420,9 @@ function drawStaticChart() {
 			const displayTime = localTime + timeShift;
 			if (displayTime < 0) continue;
 
-			const x = timeToX(displayTime);
+			const x = timeToX(displayTime) - scrollLeft; // 表示領域内でのローカル座標
+			if (x < -4 || x > width + 4) continue; // 可視範囲外は描かない
+
 			const frac = (Math.log2(hz) - Math.log2(fmin)) / (Math.log2(fmax) - Math.log2(fmin));
 			const y = height - (frac * (height - 30) + 15);
 
@@ -430,31 +434,20 @@ function drawStaticChart() {
 
 	plotSeries(fileAnalysisData, '#4af', parseFloat(UI.confThresholdInput.value), 0);						// ファイル分析: スカイブルー
 	plotSeries(micAnalysisData, '#fa4', parseFloat(UI.confThresholdMicInput.value), micTimeOffset);	// マイク録音: オレンジ
-}
-
-// 再生カーソルの線だけを描く（軽い処理。毎フレーム呼んでよい）。
-// 前回線を引いた位置だけをピンポイントで消してから新しい位置に描くため、
-// 音声の長さ（キャンバスの総幅）に関わらず処理コストはほぼ一定になる。
-function drawCursors() {
-	const height = UI.cursorCanvas.clientHeight;
-
-	if (lastFileCursorX !== null) cursorCtx.clearRect(lastFileCursorX - 4, 0, 8, height);
-	if (lastMicCursorX !== null) cursorCtx.clearRect(lastMicCursorX - 4, 0, 8, height);
-	lastFileCursorX = null;
-	lastMicCursorX = null;
 
 	// ファイル再生カーソル（赤）
 	if (fileAnalysisData && fileObjectURL) {
 		const t = getFileTime();
 		if (t >= 0 && t <= fileAnalysisData.duration) {
-			const x = timeToX(t);
-			cursorCtx.strokeStyle = audioEl.paused ? 'rgba(255,68,68,0.55)' : '#ff4444';
-			cursorCtx.lineWidth = 2;
-			cursorCtx.beginPath();
-			cursorCtx.moveTo(x, 0);
-			cursorCtx.lineTo(x, height);
-			cursorCtx.stroke();
-			lastFileCursorX = x;
+			const x = timeToX(t) - scrollLeft;
+			if (x >= -2 && x <= width + 2) {
+				pitchCtx.strokeStyle = audioEl.paused ? 'rgba(255,68,68,0.55)' : '#ff4444';
+				pitchCtx.lineWidth = 2;
+				pitchCtx.beginPath();
+				pitchCtx.moveTo(x, 0);
+				pitchCtx.lineTo(x, height);
+				pitchCtx.stroke();
+			}
 		}
 	}
 
@@ -462,14 +455,15 @@ function drawCursors() {
 	if (micAnalysisData && micObjectURL) {
 		const t = getMicTime() + micTimeOffset;
 		if (t >= 0 && t <= micAnalysisData.duration + micTimeOffset) {
-			const x = timeToX(t);
-			cursorCtx.strokeStyle = micAudioEl.paused ? 'rgba(255,210,74,0.55)' : '#ffd24a';
-			cursorCtx.lineWidth = 2;
-			cursorCtx.beginPath();
-			cursorCtx.moveTo(x, 0);
-			cursorCtx.lineTo(x, height);
-			cursorCtx.stroke();
-			lastMicCursorX = x;
+			const x = timeToX(t) - scrollLeft;
+			if (x >= -2 && x <= width + 2) {
+				pitchCtx.strokeStyle = micAudioEl.paused ? 'rgba(255,210,74,0.55)' : '#ffd24a';
+				pitchCtx.lineWidth = 2;
+				pitchCtx.beginPath();
+				pitchCtx.moveTo(x, 0);
+				pitchCtx.lineTo(x, height);
+				pitchCtx.stroke();
+			}
 		}
 	}
 }
@@ -480,15 +474,13 @@ function drawCursors() {
 function autoScrollToPlayhead(t) {
 	const container = UI.pitchScrollContainer;
 	const x = timeToX(t);
-	const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
-	const target = Math.max(0, Math.min(maxScrollLeft, x - container.clientWidth / 2));
-	container.scrollLeft = target;
+	setScrollLeftAndRender(x - container.clientWidth / 2);
 }
 
 // 最後まで再生し終えた際、チャートの右端（終端）を表示したままにする。
 function scrollToRightEdge() {
 	const container = UI.pitchScrollContainer;
-	container.scrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+	setScrollLeftAndRender(container.scrollWidth - container.clientWidth);
 }
 
 /* ********************************************************************************
@@ -518,11 +510,10 @@ audioEl.addEventListener('play', () => {
 });
 audioEl.addEventListener('pause', () => {
 	UI.playPauseBtn.textContent = LITERALS.get('playPauseBtn');
-	drawCursors();
+	render();
 });
 audioEl.addEventListener('ended', () => {
 	UI.playPauseBtn.textContent = LITERALS.get('playPauseBtn');
-	drawCursors();
 	scrollToRightEdge(); // 最後まで再生し終えた際は、チャートの右端（終端）を表示したままにする
 });
 audioEl.addEventListener('error', () => {
@@ -532,7 +523,6 @@ audioEl.addEventListener('error', () => {
 
 function updateFilePlayhead() {
 	if (audioEl.paused) return;
-	drawCursors();
 	autoScrollToPlayhead(getFileTime());
 	requestAnimationFrame(updateFilePlayhead);
 }
@@ -551,7 +541,7 @@ function clearMicComparison() {
 	micTimeOffset = 0;
 	UI.micPlayPauseBtn.disabled = true;
 	UI.micSpeedSlider.disabled = true;
-	resizeCanvases();
+	layoutAndRender();
 }
 
 const MIC_WORKLET_SOURCE = `
@@ -721,7 +711,7 @@ async function analyzeMicRecording(nativeSamples, nativeRate) {
 		};
 		micTimeOffset = 0;
 
-		resizeCanvases();
+		layoutAndRender();
 		UI.statusDiv.textContent = `${LITERALS.get('finishMicAanalysing')}${micAnalysisData.duration.toFixed(2)}${LITERALS.get('sec')}${LITERALS.get('secClose')}`;
 	} catch (err) {
 		console.error(err);
@@ -793,15 +783,16 @@ micAudioEl.addEventListener('play', () => {
 });
 micAudioEl.addEventListener('pause', () => {
 	UI.micPlayPauseBtn.textContent = LITERALS.get('micPlayPauseBtn');
-	drawCursors();
+	render();
 });
 micAudioEl.addEventListener('ended', () => {
 	UI.micPlayPauseBtn.textContent = LITERALS.get('micPlayPauseBtn');
-	drawCursors();
 	// チャート全体の右端ではなく、マイクの再生カーソルの終端位置に表示を留める
 	// （音声ファイルの方が長い場合に、ファイルの終端まで飛んでしまわないようにする）。
 	if (micAnalysisData) {
 		autoScrollToPlayhead(micAnalysisData.duration + micTimeOffset);
+	} else {
+		render();
 	}
 });
 micAudioEl.addEventListener('error', () => {
@@ -811,7 +802,6 @@ micAudioEl.addEventListener('error', () => {
 
 function updateMicPlayhead() {
 	if (micAudioEl.paused) return;
-	drawCursors();
 	autoScrollToPlayhead(getMicTime() + micTimeOffset);
 	requestAnimationFrame(updateMicPlayhead);
 }
@@ -836,7 +826,7 @@ UI.pitchCanvas.addEventListener('pointermove', (e) => {
 	const deltaPx = canvasX - micOffsetDragStartX;
 	const deltaSec = deltaPx / PIXELS_PER_SECOND;
 	micTimeOffset = micOffsetDragStartValue + deltaSec;
-	refreshChartAfterMicOffsetChange();
+	layoutAndRender();
 });
 
 function endMicOffsetDrag() {
@@ -850,5 +840,5 @@ UI.pitchCanvas.addEventListener('pointercancel', endMicOffsetDrag);
 UI.pitchCanvas.addEventListener('dblclick', () => {
 	if (!micAnalysisData || micTimeOffset === 0) return;
 	micTimeOffset = 0;
-	refreshChartAfterMicOffsetChange();
+	layoutAndRender();
 });

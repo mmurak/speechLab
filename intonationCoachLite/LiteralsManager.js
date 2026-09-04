@@ -16,8 +16,8 @@ export class LiteralsManager {
 				eng: '🔴',
 			},
 			'recordBtnHint': {
-				jpn: '長押しで録音、離すと分析します。',
-				eng: 'Hold to record, release to analyse.',
+				jpn: 'クリックで録音開始、再クリックで録音終了します。',
+				eng: 'Click to start recording, click again to stop.',
 			},
 			'micPlayPauseBtn': {
 				jpn: '🎤再生',
@@ -99,6 +99,14 @@ export class LiteralsManager {
 				jpn: 'ファイルの分析に失敗しました、または音声が短すぎます。',
 				eng: 'Failed to analyse the file, or the audio is too short.',
 			},
+			'filePlaybackError': {
+				jpn: '再生に失敗しました。この端末・ブラウザでは対応していない音声形式の可能性があります。',
+				eng: 'Playback failed. The audio format may not be supported on this device/browser.',
+			},
+			'micPlaybackError': {
+				jpn: 'マイク録音の再生に失敗しました。',
+				eng: 'Failed to play back the mic. recording.',
+			},
 			'pause': {
 				jpn: '停止',
 				eng: 'Pause',
@@ -112,7 +120,7 @@ export class LiteralsManager {
 				eng: '🔴<br>Rec...',
 			},
 			'statusRecording': {
-				jpn: '録音中... ボタンを離すと分析します。',
+				jpn: '録音中... もう一度ボタンを押すと終了します。',
 				eng: 'Recording...  Release the button to analyse.',
 			},
 			'micAccessError': {

@@ -602,9 +602,17 @@ async function ensureMicContext() {
 	}
 }
 
-UI.recordBtn.addEventListener('pointerdown', async (ev) => {
-	if (UI.recordBtn.disabled || isRecording) return;
-	ev.preventDefault();
+UI.recordBtn.addEventListener('click', async () => {
+	if (UI.recordBtn.disabled) return;
+	if (!isRecording) {
+		await startRecording();
+	} else {
+		await stopRecordingAndAnalyze();
+	}
+});
+
+async function startRecording() {
+	if (isRecording) return;
 	try {
 		await ensureMicContext();
 		if (!micStream) {
@@ -633,14 +641,13 @@ UI.recordBtn.addEventListener('pointerdown', async (ev) => {
 		UI.recordBtn.classList.add('active');
 		UI.recordBtn.innerHTML = LITERALS.get('recording1');
 		UI.statusDiv.textContent = LITERALS.get('statusRecording');
-		try { UI.recordBtn.setPointerCapture(ev.pointerId); } catch (e) {}
 	} catch (err) {
 		console.error(err);
 		UI.statusDiv.textContent = LITERALS.get('micAccessError');
 	}
-});
+}
 
-async function onRecordRelease() {
+async function stopRecordingAndAnalyze() {
 	if (!isRecording) return;
 	isRecording = false;
 	UI.recordBtn.classList.remove('active');
@@ -678,8 +685,6 @@ async function onRecordRelease() {
 
 	await analyzeMicRecording(merged, micNativeRate);
 }
-UI.recordBtn.addEventListener('pointerup', onRecordRelease);
-UI.recordBtn.addEventListener('pointercancel', onRecordRelease);
 
 async function analyzeMicRecording(nativeSamples, nativeRate) {
 	if (!session) {
@@ -793,7 +798,11 @@ micAudioEl.addEventListener('pause', () => {
 micAudioEl.addEventListener('ended', () => {
 	UI.micPlayPauseBtn.textContent = LITERALS.get('micPlayPauseBtn');
 	drawCursors();
-	scrollToRightEdge(); // 最後まで再生し終えた際は、チャートの右端（終端）を表示したままにする
+	// チャート全体の右端ではなく、マイクの再生カーソルの終端位置に表示を留める
+	// （音声ファイルの方が長い場合に、ファイルの終端まで飛んでしまわないようにする）。
+	if (micAnalysisData) {
+		autoScrollToPlayhead(micAnalysisData.duration + micTimeOffset);
+	}
 });
 micAudioEl.addEventListener('error', () => {
 	console.error('micAudioEl error', micAudioEl.error);

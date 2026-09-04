@@ -12,8 +12,8 @@ export class LiteralsManager {
 				eng: '💿Play',
 			},
 			'recordBtn': {
-				jpn: '🔴録音',
-				eng: '🔴Rec',
+				jpn: '🔴<br>待機中',
+				eng: '🔴<br>Ready',
 			},
 			'recordBtnHint': {
 				jpn: 'クリックで録音開始、再クリックで録音終了します。',

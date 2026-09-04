@@ -76,9 +76,9 @@ class UserInterfaceWidgets {
 }
 const UI = new UserInterfaceWidgets();
 
-// 再生用のAudio要素（ピッチを保ったまま速度可変で再生するために<audio>を使う）
+// 再生用のAudio要素（ピッチを保ったまま速度可変再生を実現するために<audio>を使う）
 // iOS/iPadOS等では、JSだけで生成した(DOMに存在しない)Audio要素だと再生が不安定になる
-// ことがあるため、HTML側に用意した実在の<audio>要素を参照する。
+// ことがあるため、HTML側に用意したリアルな<audio>要素を参照する。
 const audioEl = document.getElementById('filePlayerElement');
 const micAudioEl = document.getElementById('micPlayerElement');
 
@@ -115,9 +115,9 @@ const pitchCtx = UI.pitchCanvas.getContext('2d');
  * ピッチチャートのレイアウト・仮想スクロール
  * ---------------------------------------------------------------------------
  * 長い音声でも重くならないよう、キャンバス自体は常に「表示領域と同じ小さな
- * 固定サイズ」のままにし、音声全体ぶんの横スクロールは透明なスペーサー要素
+ * 固定サイズ」のままにし、音声全体分の横スクロールは透明なスペーサー要素
  * (#pitchScrollSpacer)に受け持たせる。キャンバスを乗せた#pitchPlotWrapperは
- * スクロール位置ぶんだけCSSのtransformで逆方向にずらし、常に表示領域の左上に
+ * スクロール位置分だけCSSのtransformで逆方向にずらし、常に表示領域の左上に
  * 重なって見えるようにする（仮想スクロール）。
  * 描画時も、現在の可視時間範囲に該当するデータだけをインデックス計算で絞り
  * 込んでから描くため、音声がどれだけ長くても毎回の描画コストはほぼ一定になる。
@@ -132,7 +132,7 @@ function timeToX(t) {
 	return PLOT_ORIGIN_X + t * PIXELS_PER_SECOND;
 }
 
-// キャンバス（表示領域と同じ小さいサイズ）とスペーサー（音声全体ぶんの幅）を
+// キャンバス（表示領域と同じ小さいサイズ）とスペーサー（音声全体分の幅）を
 // 必要に応じて再設定し、現在のスクロール位置に合わせて再描画する。
 function layoutAndRender() {
 	const containerHeight = UI.pitchScrollContainer.clientHeight || 280;
@@ -165,7 +165,7 @@ function scheduleResize() {
 const resizeObserver = new ResizeObserver(scheduleResize);
 resizeObserver.observe(UI.pitchScrollContainer);
 
-// プロット用ラッパーを、現在のスクロール位置ぶんだけ逆方向にずらして、常に
+// プロット用ラッパーを、現在のスクロール位置分だけ逆方向にずらして、常に
 // 表示領域の左上に重なって見えるようにする（＝キャンバスは仮想的に「固定」）。
 function syncWrapperTransform() {
 	UI.pitchPlotWrapper.style.transform = 'translateX(' + UI.pitchScrollContainer.scrollLeft + 'px)';
@@ -650,7 +650,7 @@ async function stopRecordingAndAnalyze() {
 
 	// iOSでは、マイクの録音用オーディオセッション（PlayAndRecordカテゴリ）を開いた
 	// ままにしておくと、その後の<audio>要素での再生が無音になったり、ルーティング
-	// がおかしくなったりすることがある。録音が終わったら即座にマイクとAudioContext
+	// がおかしくなったりする場合がある。録音が終わったら即座にマイクとAudioContext
 	// を解放し、通常の再生用セッションに戻れるようにしておく。
 	releaseMicResources();
 

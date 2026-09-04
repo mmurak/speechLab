@@ -140,12 +140,25 @@ input[type="range"] {
 #pitchChartScrollContainer::-webkit-scrollbar-thumb:hover {
 	background: #999;
 }
-#pitchCanvas {
+#pitchPlotWrapper {
+	position: relative;
+	height: 280px;
+}
+#pitchCanvas, #cursorCanvas {
+	position: absolute;
+	top: 0;
+	left: 0;
 	display: block;
 	height: 280px;
+}
+#pitchCanvas {
 	touch-action: none;		/* マイク録音位置のドラッグ操作中にスクロール等が起きないように */
 	user-select: none;
 	cursor: default;
+}
+#cursorCanvas {
+	/* カーソル専用の透過レイヤー。クリック/ドラッグは下のpitchCanvasに通す */
+	pointer-events: none;
 }
 .record-btn {
 	flex: 0 0 auto;
@@ -222,7 +235,10 @@ input[type="range"] {
 			<!-- 4行目: チャート + 録音ボタン -->
 			<div class="chart-row">
 				<div id="pitchChartScrollContainer">
-					<canvas id="pitchCanvas"></canvas>
+					<div id="pitchPlotWrapper">
+						<canvas id="pitchCanvas"></canvas>
+						<canvas id="cursorCanvas"></canvas>
+					</div>
 				</div>
 				<button id="recordBtn" class="record-btn" disabled>🔴</button>
 			</div>
@@ -232,6 +248,10 @@ input[type="range"] {
 
 			<!-- 最下行: footer -->
 			<footer class="footer" id="footer">SwiftF0 by Lars Nieradzik (MIT License) · 音声はブラウザ内でのみ処理され、外部へは送信されません。</footer>
+
+			<!-- 再生用のaudio要素（iOS/iPadOS等での再生安定性のため、DOMに実在させておく） -->
+			<audio id="filePlayerElement" preload="auto"></audio>
+			<audio id="micPlayerElement" preload="auto"></audio>
 		</div>
 		<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 		<script type="module" src="./intonationCoachLite/intonationCoachLite.js"></script>

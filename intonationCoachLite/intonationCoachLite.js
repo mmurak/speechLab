@@ -295,6 +295,7 @@ UI.fileInput.addEventListener('change', async (e) => {
 	if (fileAnalysisData) {
 		UI.playPauseBtn.disabled = false;
 		UI.fileSpeedSlider.disabled = false;
+		UI.pitchScrollContainer.scrollLeft = 0; // 読み込み直後はチャートの先頭(左端)を表示する
 	}
 });
 
@@ -484,6 +485,12 @@ function autoScrollToPlayhead(t) {
 	container.scrollLeft = target;
 }
 
+// 最後まで再生し終えた際、チャートの右端（終端）を表示したままにする。
+function scrollToRightEdge() {
+	const container = UI.pitchScrollContainer;
+	container.scrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+}
+
 /* ********************************************************************************
  * ファイル再生・停止制御
  * ********************************************************************************/
@@ -497,6 +504,10 @@ UI.playPauseBtn.addEventListener('click', () => {
 		audioEl.pause();
 	} else {
 		stopMicPlayback();
+		// 末尾まで再生済みの場合は、先頭から再生し直す
+		if (audioEl.ended || audioEl.currentTime >= fileAnalysisData.duration - 0.02) {
+			audioEl.currentTime = 0;
+		}
 		audioEl.play();
 	}
 });
@@ -510,10 +521,9 @@ audioEl.addEventListener('pause', () => {
 	drawCursors();
 });
 audioEl.addEventListener('ended', () => {
-	audioEl.currentTime = 0;
 	UI.playPauseBtn.textContent = LITERALS.get('playPauseBtn');
 	drawCursors();
-	UI.pitchScrollContainer.scrollLeft = 0;
+	scrollToRightEdge(); // 最後まで再生し終えた際は、チャートの右端（終端）を表示したままにする
 });
 audioEl.addEventListener('error', () => {
 	console.error('audioEl error', audioEl.error);
@@ -764,6 +774,10 @@ UI.micPlayPauseBtn.addEventListener('click', () => {
 		micAudioEl.pause();
 	} else {
 		stopFilePlayback();
+		// 末尾まで再生済みの場合は、先頭から再生し直す
+		if (micAudioEl.ended || (micAnalysisData && micAudioEl.currentTime >= micAnalysisData.duration - 0.02)) {
+			micAudioEl.currentTime = 0;
+		}
 		micAudioEl.play();
 	}
 });
@@ -777,10 +791,9 @@ micAudioEl.addEventListener('pause', () => {
 	drawCursors();
 });
 micAudioEl.addEventListener('ended', () => {
-	micAudioEl.currentTime = 0;
 	UI.micPlayPauseBtn.textContent = LITERALS.get('micPlayPauseBtn');
 	drawCursors();
-	autoScrollToPlayhead(micTimeOffset);
+	scrollToRightEdge(); // 最後まで再生し終えた際は、チャートの右端（終端）を表示したままにする
 });
 micAudioEl.addEventListener('error', () => {
 	console.error('micAudioEl error', micAudioEl.error);

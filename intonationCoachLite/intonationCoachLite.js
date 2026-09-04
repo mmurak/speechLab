@@ -492,6 +492,7 @@ function stopFilePlayback() {
 
 UI.playPauseBtn.addEventListener('click', () => {
 	if (!fileAnalysisData) return;
+	tryResumeAudioContexts();
 	if (!audioEl.paused) {
 		audioEl.pause();
 	} else {
@@ -647,6 +648,12 @@ async function stopRecordingAndAnalyze() {
 	try { micWorkletNode.disconnect(); } catch (e) {}
 	if (micWorkletNode) micWorkletNode.port.onmessage = null;
 
+	// iOSでは、マイクの録音用オーディオセッション（PlayAndRecordカテゴリ）を開いた
+	// ままにしておくと、その後の<audio>要素での再生が無音になったり、ルーティング
+	// がおかしくなったりすることがある。録音が終わったら即座にマイクとAudioContext
+	// を解放し、通常の再生用セッションに戻れるようにしておく。
+	releaseMicResources();
+
 	if (!micChunks.length) {
 		UI.statusDiv.textContent = LITERALS.get('noRecData');
 		return;
@@ -675,6 +682,30 @@ async function stopRecordingAndAnalyze() {
 
 	await analyzeMicRecording(merged, micNativeRate);
 }
+
+// マイクのトラックを止め、AudioContextも休止状態に戻す。次回録音時は
+// startRecording() 内の ensureMicContext() / getUserMedia() で改めて確保し直す。
+function releaseMicResources() {
+	if (micStream) {
+		micStream.getTracks().forEach((track) => track.stop());
+		micStream = null;
+	}
+	if (micAudioCtx && micAudioCtx.state === 'running') {
+		micAudioCtx.suspend().catch(() => {});
+	}
+}
+
+// iOS等では、何らかの割り込み（電話・Siri・バックグラウンド化など）でAudioContext
+// が意図せずsuspendされたままになることがある。実際のユーザー操作（クリック）の
+// 中でresume()を試みておくと、そのまま無音状態が固定化するのを防ぎやすい。
+function tryResumeAudioContexts() {
+	if (micAudioCtx && micAudioCtx.state === 'suspended') {
+		micAudioCtx.resume().catch(() => {});
+	}
+}
+document.addEventListener('visibilitychange', () => {
+	if (document.visibilityState === 'visible') tryResumeAudioContexts();
+});
 
 async function analyzeMicRecording(nativeSamples, nativeRate) {
 	if (!session) {
@@ -765,6 +796,7 @@ function stopMicPlayback() {
 
 UI.micPlayPauseBtn.addEventListener('click', () => {
 	if (!micObjectURL) return;
+	tryResumeAudioContexts();
 	if (!micAudioEl.paused) {
 		micAudioEl.pause();
 	} else {

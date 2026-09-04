@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8">
+		<title>Intonation Coach/T</title>
+		<link rel="shortcut icon" href="./intonationCoachT/Kiwi-bird-green.png">
+		<link rel="stylesheet" href="./intonationCoachT/intonationCoachT.css">
+		<style>
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<!-- 1行目: タイトル + status -->
+			<div class="title-row">
+				<h2>Intonation Coach Lite</h2>
+				<div id="status">モデルを初期化中...</div>
+			</div>
+
+			<!-- 2・3行目: ファイル / マイクのコントロール -->
+			<div class="control-grid">
+				<!-- ファイル -->
+				<input type="file" id="audioFile" accept="audio/*">
+				<div class="pitch-controls">
+					<span class="swatch swatch-file"></span>
+					<label id="confLabel" for="confThreshold" title="クリックしてデフォルト値(0.90)に戻す">信頼度 ≧: </label>
+					<span id="confValue"></span>
+					<input type="range" id="confThreshold" min="0" max="0.99" step="0.01" value="0.90">
+				</div>
+				<button id="playPauseBtn" disabled>💿再生</button>
+				<div class="speed-controls">
+					<label id="speedLabel" for="fileSpeedSlider">速度:</label>
+					<input type="range" id="fileSpeedSlider" min="0.2" max="1.0" step="0.05" value="1.0" disabled>
+					<span id="fileSpeedValue">1.00x</span>
+				</div>
+
+				<!-- マイク（列は上のファイル行に揃える） -->
+				<div></div>
+				<div class="pitch-controls">
+					<span class="swatch swatch-mic"></span>
+					<label id="confLabelMic" for="confThresholdMic" title="クリックしてデフォルト値(0.90)に戻す">信頼度 ≧: </label>
+					<span id="confValueMic"></span>
+					<input type="range" id="confThresholdMic" min="0" max="0.99" step="0.01" value="0.90">
+				</div>
+				<button id="micPlayPauseBtn" disabled>🎤再生</button>
+				<div class="speed-controls">
+					<label id="speedLabelMic" for="micSpeedSlider">速度:</label>
+					<input type="range" id="micSpeedSlider" min="0.2" max="1.0" step="0.05" value="1.0" disabled>
+					<span id="micSpeedValue">1.00x</span>
+				</div>
+			</div>
+
+			<!-- 4行目: チャート + 録音ボタン -->
+			<div class="chart-row">
+				<div id="pitchChartScrollContainer">
+					<div id="pitchScrollSpacer"></div>
+					<div id="pitchPlotWrapper">
+						<canvas id="pitchCanvas"></canvas>
+					</div>
+				</div>
+				<button id="recordBtn" class="record-btn" disabled>🔴<br>待機中</button>
+			</div>
+
+			<!-- 5行目: ヒントメッセージ -->
+			<div class="hint" id="hintText">※ マイク録音の波形（オレンジ）は左右にドラッグして位置を調整できます（ダブルクリックでリセット）。</div>
+
+			<!-- 最下行: footer -->
+			<footer class="footer" id="footer">SwiftF0 by Lars Nieradzik (MIT License) · 音声はブラウザ内でのみ処理され、外部へは送信されません。</footer>
+
+			<!-- 再生用のaudio要素（iOS/iPadOS等での再生安定性のため、DOMに実在させておく） -->
+			<audio id="filePlayerElement" preload="auto"></audio>
+			<audio id="micPlayerElement" preload="auto"></audio>
+		</div>
+		<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+		<script type="module" src="./intonationCoachT/intonationCoachT.js"></script>
+	</body>
+</html>

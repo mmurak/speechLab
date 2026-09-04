@@ -1,0 +1,182 @@
+body {
+	font-family: sans-serif;
+	margin: 20px;
+	background: #121212;
+	color: #fff;
+}
+.container {
+	max-width: 100%;
+	margin: auto;
+}
+
+/* 1行目: タイトル + status（右詰め） */
+.title-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	margin-bottom: 12px;
+}
+.title-row h2 {
+	margin: 0;
+}
+.title-row h2 .subtitle {
+	font-size: 0.55em;
+	font-weight: normal;
+	color: #aaa;
+	margin-left: 8px;
+}
+#status {
+	font-size: 0.9em;
+	color: #aaa;
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* 2・3行目: ファイル / マイクのコントロール（列を揃える） */
+.control-grid {
+	display: grid;
+	grid-template-columns: auto auto auto auto;
+	column-gap: 18px;
+	row-gap: 10px;
+	align-items: center;
+	margin-bottom: 18px;
+}
+.pitch-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9em;
+	color: #aaa;
+	white-space: nowrap;
+}
+.pitch-controls label {
+	cursor: pointer;
+	user-select: none;
+}
+.pitch-controls label:hover {
+	color: #fff;
+	text-decoration: underline;
+}
+.speed-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9em;
+	color: #aaa;
+	white-space: nowrap;
+}
+.speed-controls span {
+	min-width: 3.6em;
+	display: inline-block;
+}
+.swatch {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	display: inline-block;
+	flex-shrink: 0;
+}
+.swatch-file { background: #4af; }
+.swatch-mic { background: #fa4; }
+
+button, input[type="file"] {
+	padding: 8px 12px;
+	background: #333;
+	color: #fff;
+	border: 1px solid #555;
+	cursor: pointer;
+	border-radius: 4px;
+}
+button:hover {
+	background: #444;
+}
+button:disabled, input:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+input[type="range"] {
+	cursor: pointer;
+}
+
+/* 4行目: チャート + 右端の録音ボタン */
+.chart-row {
+	display: flex;
+	align-items: stretch;
+	gap: 10px;
+	margin-bottom: 6px;
+}
+#pitchChartScrollContainer {
+	position: relative;
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	border: 1px solid #444;
+	background: #1e1e1e;
+	height: 280px;
+	/* スマホ等で扱いやすいよう、太めのスクロールバーにする */
+	scrollbar-width: auto;
+	scrollbar-color: #777 #2a2a2a;
+}
+#pitchChartScrollContainer::-webkit-scrollbar {
+	height: 20px;
+}
+#pitchChartScrollContainer::-webkit-scrollbar-track {
+	background: #2a2a2a;
+}
+#pitchChartScrollContainer::-webkit-scrollbar-thumb {
+	background: #777;
+	border-radius: 10px;
+	border: 4px solid #2a2a2a;
+}
+#pitchChartScrollContainer::-webkit-scrollbar-thumb:hover {
+	background: #999;
+}
+/* スクロール可能な範囲（音声の総時間ぶん）だけを確保するための透明なスペーサー。
+   実際に描画するキャンバスはこの上に固定サイズで重ねて表示する（仮想スクロール）。 */
+#pitchScrollSpacer {
+	height: 1px;
+}
+#pitchPlotWrapper {
+	position: absolute;
+	top: 0;
+	left: 0;
+	will-change: transform;
+}
+#pitchCanvas {
+	display: block;
+	touch-action: none;
+	user-select: none;
+	cursor: default;
+}
+.record-btn {
+	flex: 0 0 auto;
+	width: 92px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	line-height: 1.4;
+	font-size: 0.95em;
+	touch-action: none;	
+	user-select: none;
+}
+.record-btn.active {
+	background: #a33;
+	border-color: #d55;
+	color: #fff;
+}
+
+.hint {
+	font-size: 0.8em;
+	color: #777;
+	margin-bottom: 60px;
+}
+.footer {
+	position: fixed;
+	bottom: 0;
+	font-size: 0.8em;
+	color: lightGray;
+}

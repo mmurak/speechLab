@@ -40,6 +40,8 @@ let micSourceNode = null;
 let micNativeRate = 0;
 let isRecording = false;
 let micChunks = [];					// 録音時に使用するネイティブレートのFloat32Arrayチャンク
+const RECORDING_WARMUP_SEC = 0.15;	// マイク起動直後の"プチッ"というポップノイズを避けるため、この秒数ぶんを捨てる
+let warmupSamplesToSkip = 0;			// 録音開始時にRECORDING_WARMUP_SEC分のサンプル数へ設定する
 let micObjectURL = null;			// 再生用（Audio要素のsrc）
 let micAnalysisData = null;			// {pitchData, confData, duration}
 
@@ -629,7 +631,21 @@ async function startRecording() {
 		const silentSink = micAudioCtx.createMediaStreamDestination();
 
 		micChunks = [];
-		micWorkletNode.port.onmessage = (e) => { micChunks.push(e.data); };
+		warmupSamplesToSkip = Math.round(RECORDING_WARMUP_SEC * micNativeRate);
+		micWorkletNode.port.onmessage = (e) => {
+			let chunk = e.data;
+			if (warmupSamplesToSkip > 0) {
+				if (chunk.length <= warmupSamplesToSkip) {
+					// このチャンクは丸ごとウォームアップ区間なので捨てる
+					warmupSamplesToSkip -= chunk.length;
+					return;
+				}
+				// チャンクの前半だけウォームアップ区間なので、そこだけ切り捨てる
+				chunk = chunk.subarray(warmupSamplesToSkip);
+				warmupSamplesToSkip = 0;
+			}
+			micChunks.push(chunk);
+		};
 
 		micSourceNode.connect(micWorkletNode);
 		micWorkletNode.connect(silentSink);

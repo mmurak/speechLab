@@ -59,6 +59,8 @@ class UserInterfaceWidgets {
 		this.fileSpeedSlider = document.getElementById('fileSpeedSlider');
 		this.fileSpeedValue = document.getElementById('fileSpeedValue');
 		this.pitchScrollContainer = document.getElementById('pitchChartScrollContainer');
+		this.scrollbarTrack = document.getElementById('pitchScrollbarTrack');
+		this.scrollbarThumb = document.getElementById('pitchScrollbarThumb');
 		this.pitchScrollSpacer = document.getElementById('pitchScrollSpacer');
 		this.pitchPlotWrapper = document.getElementById('pitchPlotWrapper');
 		this.pitchCanvas = document.getElementById('pitchCanvas');
@@ -156,6 +158,7 @@ function layoutAndRender() {
 
 	syncWrapperTransform();
 	render();
+	updateScrollbarThumb();
 }
 layoutAndRender();
 
@@ -180,12 +183,83 @@ function setScrollLeftAndRender(target) {
 	container.scrollLeft = Math.max(0, Math.min(maxScrollLeft, target));
 	syncWrapperTransform();
 	render();
+	updateScrollbarThumb();
 }
 
 // ユーザーが手動でスクロールバーをドラッグ／スワイプした場合の追従・再描画。
 UI.pitchScrollContainer.addEventListener('scroll', () => {
 	syncWrapperTransform();
 	render();
+	updateScrollbarThumb();
+});
+
+/* ********************************************************************************
+ * 自前の太いスクロールバー（トラック＋つまみ）
+ * ---------------------------------------------------------------------------
+ * Android等のタッチ環境では、ネイティブの横スクロールバーが細いオーバーレイに
+ * なりCSSで太くしても効かないことが多い。また、マイク波形のドラッグ操作の
+ * ためキャンバス上のタッチスクロールも無効化している。そこで、掴みやすい
+ * 太さのスクロールバーをHTML要素として自前で用意し、ポインター操作で直接
+ * コンテナのscrollLeftを操作する。
+ * ********************************************************************************/
+function updateScrollbarThumb() {
+	const container = UI.pitchScrollContainer;
+	const trackWidth = UI.scrollbarTrack.clientWidth;
+	if (trackWidth <= 0) return;
+
+	const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+	const visibleRatio = container.scrollWidth > 0 ? Math.min(1, container.clientWidth / container.scrollWidth) : 1;
+	const thumbWidth = Math.max(44, visibleRatio * trackWidth);
+	const availableTrack = Math.max(1, trackWidth - thumbWidth);
+	const scrollRatio = maxScrollLeft > 0 ? (container.scrollLeft / maxScrollLeft) : 0;
+	const thumbLeft = scrollRatio * availableTrack;
+
+	UI.scrollbarThumb.style.width = thumbWidth + 'px';
+	UI.scrollbarThumb.style.transform = 'translateX(' + thumbLeft + 'px)';
+}
+
+let isDraggingScrollbar = false;
+let scrollbarDragStartClientX = 0;
+let scrollbarDragStartScrollLeft = 0;
+
+UI.scrollbarThumb.addEventListener('pointerdown', (e) => {
+	isDraggingScrollbar = true;
+	scrollbarDragStartClientX = e.clientX;
+	scrollbarDragStartScrollLeft = UI.pitchScrollContainer.scrollLeft;
+	UI.scrollbarThumb.classList.add('dragging');
+	try { UI.scrollbarThumb.setPointerCapture(e.pointerId); } catch (err) {}
+});
+UI.scrollbarThumb.addEventListener('pointermove', (e) => {
+	if (!isDraggingScrollbar) return;
+	const container = UI.pitchScrollContainer;
+	const trackWidth = UI.scrollbarTrack.clientWidth;
+	const thumbWidth = UI.scrollbarThumb.clientWidth;
+	const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+	const availableTrack = Math.max(1, trackWidth - thumbWidth);
+	const deltaPx = e.clientX - scrollbarDragStartClientX;
+	const deltaScroll = (deltaPx / availableTrack) * maxScrollLeft;
+	setScrollLeftAndRender(scrollbarDragStartScrollLeft + deltaScroll);
+});
+function endScrollbarDrag() {
+	if (!isDraggingScrollbar) return;
+	isDraggingScrollbar = false;
+	UI.scrollbarThumb.classList.remove('dragging');
+}
+UI.scrollbarThumb.addEventListener('pointerup', endScrollbarDrag);
+UI.scrollbarThumb.addEventListener('pointercancel', endScrollbarDrag);
+
+// トラックの、つまみ以外の部分をタップ／クリックした場合は、その位置へ直接ジャンプする。
+UI.scrollbarTrack.addEventListener('pointerdown', (e) => {
+	if (e.target === UI.scrollbarThumb) return; // つまみ自体は上のハンドラに任せる
+	const container = UI.pitchScrollContainer;
+	const rect = UI.scrollbarTrack.getBoundingClientRect();
+	const trackWidth = rect.width;
+	const thumbWidth = UI.scrollbarThumb.clientWidth;
+	const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+	const availableTrack = Math.max(1, trackWidth - thumbWidth);
+	const clickX = e.clientX - rect.left - thumbWidth / 2;
+	const targetRatio = Math.min(1, Math.max(0, clickX / availableTrack));
+	setScrollLeftAndRender(targetRatio * maxScrollLeft);
 });
 
 /* ********************************************************************************

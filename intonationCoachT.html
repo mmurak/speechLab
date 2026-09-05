@@ -5,14 +5,12 @@
 		<title>Intonation Coach/T</title>
 		<link rel="shortcut icon" href="./intonationCoachT/Kiwi-bird-green.png">
 		<link rel="stylesheet" href="./intonationCoachT/intonationCoachT.css">
-		<style>
-		</style>
 	</head>
 	<body>
 		<div class="container">
 			<!-- 1行目: タイトル + status -->
 			<div class="title-row">
-				<h2>Intonation Coach Lite</h2>
+				<h2>Intonation Coach/T</h2>
 				<div id="status">モデルを初期化中...</div>
 			</div>
 
@@ -51,10 +49,15 @@
 
 			<!-- 4行目: チャート + 録音ボタン -->
 			<div class="chart-row">
-				<div id="pitchChartScrollContainer">
-					<div id="pitchScrollSpacer"></div>
-					<div id="pitchPlotWrapper">
-						<canvas id="pitchCanvas"></canvas>
+				<div class="chart-column">
+					<div id="pitchChartScrollContainer">
+						<div id="pitchScrollSpacer"></div>
+						<div id="pitchPlotWrapper">
+							<canvas id="pitchCanvas"></canvas>
+						</div>
+					</div>
+					<div id="pitchScrollbarTrack">
+						<div id="pitchScrollbarThumb"></div>
 					</div>
 				</div>
 				<button id="recordBtn" class="record-btn" disabled>🔴<br>待機中</button>

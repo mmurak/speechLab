@@ -20,27 +20,10 @@ html, body {
 body {
 	display: flex;
 	justify-content: center;
-	padding: 40px 20px;
+	padding: 20px 20px;
 }
 .app {
 	width: 100%;
-}
-header {
-	margin-bottom: 24px;
-}
-h1 {
-	font-size: 28px;
-	font-style: italic;
-	font-weight: 600;
-	margin: 0 0 4px;
-	color: #ffffff;
-	letter-spacing: 0.2px;
-}
-header p {
-	margin: 0;
-	color: var(--text-dim);
-	font-size: 14px;
-	line-height: 1.6;
 }
 .panel {
 	background: var(--panel);
@@ -91,7 +74,7 @@ canvas#playhead {
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	margin-top: 10px;
+	margin-top: 5px;
 	font-size: 12px;
 	color: var(--text-dim);
 }
@@ -136,7 +119,7 @@ canvas#playhead {
 }
 .readout {
 	margin-top: 14px;
-	padding-top: 14px;
+	padding-top: 5px;
 	border-top: 1px solid var(--panel-border);
 	font-size: 13px;
 	color: #ffffff;
@@ -145,7 +128,7 @@ canvas#playhead {
 	display: flex;
 	align-items: center;
 	gap: 16px;
-	margin-top: 20px;
+	margin-top: 0px;
 	flex-wrap: wrap;
 }
 .player-group {
@@ -323,9 +306,19 @@ button#recordBtn.recording::after {
 	white-space: nowrap;
 	flex: 1;
 }
+h1 {
+	font-size: 28px;
+	font-style: italic;
+	font-weight: 600;
+	margin: 0 0 4px;
+	color: #ffffff;
+	letter-spacing: 0.2px;
+}
 .footer {
 	position: fixed;
-	bottom: 0;
+	bottom: 5px;
+	right: 5px;
 	font-size: 0.8em;
 	color: lightGray;
+	width: fit-content;
 }

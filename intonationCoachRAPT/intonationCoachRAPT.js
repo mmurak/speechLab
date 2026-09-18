@@ -27,7 +27,7 @@ const CHART_MIN_HZ = 50;
 const CHART_MAX_HZ = 500;
 const LOG_MIN = Math.log2(CHART_MIN_HZ);
 const LOG_MAX = Math.log2(CHART_MAX_HZ);
-const CHART_HEIGHT = 260;				 // キャンバスの高さ(CSSピクセル、固定)
+const CHART_HEIGHT = 200;				 // キャンバスの高さ(CSSピクセル、固定)
 const PIXELS_PER_SECOND = 150;		// 1秒あたりの表示幅。これより長い録音は横スクロールになる
 const VISIBLE_MARGIN_SEC = 0.1;	 // 可視範囲の前後に余裕を持たせる時間(境界の点を取りこぼさないため)
 

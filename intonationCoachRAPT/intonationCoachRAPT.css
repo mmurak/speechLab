@@ -1,0 +1,331 @@
+:root {
+	--bg: #0B1418;
+	--panel: #101B21;
+	--panel-border: #1E2E35;
+	--grid: #1C2B32;
+	--text: #E7EEF0;
+	--text-dim: #7C8D93;
+	--accent: #F2A65A;
+	--accent-dim: #7A5730;
+	--voiced: #4FC8B0;
+}
+* { box-sizing: border-box; }
+html, body {
+	margin: 0;
+	height: 100%;
+	background: var(--bg);
+	color: var(--text);
+	font-family: "Times New Roman", serif;
+}
+body {
+	display: flex;
+	justify-content: center;
+	padding: 40px 20px;
+}
+.app {
+	width: 100%;
+}
+header {
+	margin-bottom: 24px;
+}
+h1 {
+	font-size: 28px;
+	font-style: italic;
+	font-weight: 600;
+	margin: 0 0 4px;
+	color: #ffffff;
+	letter-spacing: 0.2px;
+}
+header p {
+	margin: 0;
+	color: var(--text-dim);
+	font-size: 14px;
+	line-height: 1.6;
+}
+.panel {
+	background: var(--panel);
+	border: 1px solid var(--panel-border);
+	border-radius: 10px;
+	padding: 20px;
+}
+.chart-scroll {
+	position: relative;
+	overflow-x: auto;
+	overflow-y: hidden;
+	border-radius: 6px;
+}
+.chart-spacer {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 1px;
+	pointer-events: none;
+}
+.chart-stack {
+	position: sticky;
+	top: 0;
+	left: 0;
+}
+canvas#chart,
+canvas#chartOverlay,
+canvas#playhead {
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: block;
+}
+canvas#chart {
+	border-radius: 6px;
+}
+canvas#chartOverlay {
+	touch-action: none;
+	cursor: grab;
+}
+canvas#chartOverlay.dragging {
+	cursor: grabbing;
+}
+canvas#playhead {
+	pointer-events: none;
+}
+.legend {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 10px;
+	font-size: 12px;
+	color: var(--text-dim);
+}
+.legend span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+.legend i {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	display: inline-block;
+}
+.legend-model-gradient {
+	width: 90px;
+	height: 8px;
+	border-radius: 4px;
+	background: linear-gradient(to right,
+		#33cfff 0%,
+		#99e6ff 50%,
+		#ffffff 100%
+	);
+}
+.legend-mic-gradient {
+	width: 90px;
+	height: 8px;
+	border-radius: 4px;
+	background: linear-gradient(to right,
+		#ffb84d 0%,
+		#ffdd99 50%,
+		#ffffff 100%
+	);
+}
+.legend-mic-sample {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	display: inline-block;
+	background: rgb(203,70,121);
+	border: 1px solid rgba(11,20,24,0.8);
+}
+.readout {
+	margin-top: 14px;
+	padding-top: 14px;
+	border-top: 1px solid var(--panel-border);
+	font-size: 13px;
+	color: #ffffff;
+}
+.controls {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-top: 20px;
+	flex-wrap: wrap;
+}
+.player-group {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+button#recordBtn {
+	position: relative;
+	overflow: hidden;
+	background: var(--accent);
+	color: #211305;
+	border: none;
+	border-radius: 6px;
+	padding: 10px 20px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+}
+button#recordBtn:hover { background: #F5B879; }
+button#recordBtn:active { transform: scale(0.98); }
+button#recordBtn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+button#recordBtn.recording {
+	background: #a00000;
+	color: #ffffff;
+	border: 1px solid var(--panel-border);
+}
+button#recordBtn.recording::before,
+button#recordBtn.recording::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 10px;
+	height: 10px;
+	margin: -5px 0 0 -5px;
+	border-radius: 50%;
+	background: var(--accent);
+	opacity: 0.55;
+	pointer-events: none;
+	animation: recordRipple 1.8s ease-out infinite;
+}
+button#recordBtn.recording::after {
+	animation-delay: 0.9s;
+}
+@keyframes recordRipple {
+	0%   { transform: scale(0);  opacity: 0.55; }
+	100% { transform: scale(14); opacity: 0; }
+}
+.play-btn {
+	background: transparent;
+	color: var(--text);
+	border: 1px solid var(--panel-border);
+	border-radius: 6px;
+	padding: 10px 16px;
+	font-size: 14px;
+	cursor: pointer;
+}
+.play-btn:hover { border-color: var(--accent-dim); }
+.play-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+.play-btn.playing {
+	background: #a00000;
+	color: #ffffff;
+	border: none;
+}
+.csv-btn {
+	background: transparent;
+	color: var(--text-dim);
+	border: 1px solid var(--panel-border);
+	border-radius: 6px;
+	padding: 7px 12px;
+	font-size: 12px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.csv-btn:hover { border-color: var(--accent-dim); color: var(--text); }
+.csv-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+.model-rate-control {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--text-dim);
+}
+.model-rate-control input[type="range"] {
+	width: 90px;
+	accent-color: #33cfff;
+}
+.model-rate-control span {
+	font-variant-numeric: tabular-nums;
+	min-width: 42px;
+}
+.mic-rate-control {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--text-dim);
+}
+.mic-rate-control input[type="range"] {
+	width: 90px;
+	accent-color: var(--accent);
+}
+.mic-rate-control span {
+	font-variant-numeric: tabular-nums;
+	min-width: 42px;
+}
+.range-controls {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	font-size: 13px;
+	color: var(--text-dim);
+}
+.range-controls label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.range-controls input {
+	width: 64px;
+	background: #0E181D;
+	border: 1px solid var(--panel-border);
+	color: var(--text);
+	border-radius: 4px;
+	padding: 5px 6px;
+	font-size: 13px;
+}
+.status {
+	margin-left: auto;
+	font-size: 13px;
+	color: var(--text-dim);
+}
+.status.error { color: #E27878; }
+.file-controls {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 14px;
+	padding-top: 14px;
+	border-top: 1px solid var(--panel-border);
+}
+.file-button {
+	background: #33cfff;
+	color: #211305;
+	border: none;
+	border-radius: 6px;
+	padding: 10px 20px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+}
+.file-button:hover { border-color: var(--accent-dim); }
+.file-button.disabled {
+	opacity: 0.5;
+	pointer-events: none;
+}
+.file-name {
+	font-size: 13px;
+	color: var(--text-dim);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	flex: 1;
+}
+.footer {
+	position: fixed;
+	bottom: 0;
+	font-size: 0.8em;
+	color: lightGray;
+}

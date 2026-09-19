@@ -40,7 +40,8 @@ body {
 	scrollbar-color: #33cfff var(--panel-border);
 }
 .chart-scroll::-webkit-scrollbar {
-	height: 16px;
+	display: none;
+//	height: 16px;
 }
 .chart-scroll::-webkit-scrollbar-track {
 	background: var(--panel-border);
@@ -58,6 +59,7 @@ body {
 	background: var(--panel-border);
 	border-radius: 8px;
 	touch-action: none;
+	border: 2px solid red;
 }
 .custom-scrollbar-thumb {
 	position: absolute;

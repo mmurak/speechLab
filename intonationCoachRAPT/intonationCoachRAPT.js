@@ -680,3 +680,4 @@ highFreqInput.addEventListener('change', reanalyzeWithCurrentRange);
 
 window.addEventListener('resize', layoutCanvas);
 layoutCanvas();
+window.addEventListener('load', layoutCanvas); // ← 追加: 全リソース読み込み完了後にも再計算する

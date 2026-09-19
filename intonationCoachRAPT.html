@@ -20,6 +20,9 @@
 						<canvas id="playhead"></canvas>
 					</div>
 				</div>
+				<div class="custom-scrollbar-track" id="customScrollbarTrack">
+					<div class="custom-scrollbar-thumb" id="customScrollbarThumb"></div>
+				</div>
 				<div class="legend">
 					<span>モデルの音の強さ(RMS): 弱 → 強</span>
 					<span class="legend-model-gradient"></span>&nbsp;
@@ -37,7 +40,6 @@
 						<td>
 							<label for="audioFileInput" class="file-button" id="fileButtonLabel">ファイル入力</label>
 							<input type="file" id="audioFileInput" accept="audio/*" hidden>
-							<span class="file-name" id="fileNameLabel"></span>
 						</td>
 						<td>
 							<button id="filePlayBtn" class="play-btn" disabled>ファイルを再生</button>
@@ -51,6 +53,9 @@
 						</td>
 						<td>
 							<button id="fileCsvBtn" class="csv-btn" hidden disabled>CSVを保存</button>
+						</td>
+						<td>
+							<span class="file-name" id="fileNameLabel"></span>
 						</td>
 					</tr>
 					<tr>
@@ -69,6 +74,8 @@
 						</td>
 						<td>
 							<button id="micCsvBtn" class="csv-btn" hidden disabled>CSVを保存</button>
+						</td>
+						<td>
 						</td>
 					</tr>
 				</table>

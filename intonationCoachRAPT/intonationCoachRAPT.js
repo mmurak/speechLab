@@ -7,6 +7,8 @@ const playheadCtx = playheadCanvas.getContext('2d');
 const chartScrollEl = document.getElementById('chartScroll');
 const chartSpacerEl = document.getElementById('chartSpacer');
 const chartStackEl = document.getElementById('chartStack');
+const customScrollbarTrack = document.getElementById('customScrollbarTrack');
+const customScrollbarThumb = document.getElementById('customScrollbarThumb');
 const recordBtn = document.getElementById('recordBtn');
 const filePlayBtn = document.getElementById('filePlayBtn');
 const micPlayBtn = document.getElementById('micPlayBtn');
@@ -27,7 +29,8 @@ const CHART_MIN_HZ = 50;
 const CHART_MAX_HZ = 500;
 const LOG_MIN = Math.log2(CHART_MIN_HZ);
 const LOG_MAX = Math.log2(CHART_MAX_HZ);
-const CHART_HEIGHT = 200;				 // キャンバスの高さ(CSSピクセル、固定)
+const CHART_HEIGHT = 200;				// キャンバスの高さ(CSSピクセル、固定)
+const SCROLLBAR_HEIGHT = 16;		// 太くしたスクロールバー分の余白(CSSの::-webkit-scrollbarと合わせる)
 const PIXELS_PER_SECOND = 150;		// 1秒あたりの表示幅。これより長い録音は横スクロールになる
 const VISIBLE_MARGIN_SEC = 0.1;	 // 可視範囲の前後に余裕を持たせる時間(境界の点を取りこぼさないため)
 
@@ -98,7 +101,7 @@ function layoutCanvas() {
 	currentContentWidth = Math.max(viewportWidth, Math.ceil(duration * PIXELS_PER_SECOND));
 	currentViewportWidth = viewportWidth;
 
-	chartScrollEl.style.height = CHART_HEIGHT + 'px';
+	chartScrollEl.style.height = (CHART_HEIGHT + SCROLLBAR_HEIGHT) + 'px';
 	chartSpacerEl.style.width = currentContentWidth + 'px';
 	chartStackEl.style.width = viewportWidth + 'px';
 	chartStackEl.style.height = CHART_HEIGHT + 'px';
@@ -240,10 +243,82 @@ function renderFrame() {
 	lastRenderedMicOffset = micOffsetPx;
 
 	drawPlayheads();
+	updateCustomScrollbar();
 }
 
 // ユーザーがスクロールバー・トラックパッド等で直接スクロールした場合にも追従する
 chartScrollEl.addEventListener('scroll', renderFrame);
+
+function updateCustomScrollbar() {
+	const trackWidth = customScrollbarTrack.clientWidth;
+	const viewport = currentViewportWidth || chartScrollEl.clientWidth;
+	const content = currentContentWidth || viewport;
+	const maxScroll = Math.max(0, content - viewport);
+
+	if (maxScroll <= 0 || trackWidth <= 0) {
+		customScrollbarTrack.style.display = 'none';
+		return;
+	}
+	customScrollbarTrack.style.display = '';
+
+	const thumbWidth = Math.max(24, (viewport / content) * trackWidth);
+	const maxThumbLeft = Math.max(0, trackWidth - thumbWidth);
+	const thumbLeft = (chartScrollEl.scrollLeft / maxScroll) * maxThumbLeft;
+
+	customScrollbarThumb.style.width = thumbWidth + 'px';
+	customScrollbarThumb.style.left = thumbLeft + 'px';
+}
+
+let sbDragging = false;
+let sbDragStartX = 0;
+let sbDragStartScrollLeft = 0;
+
+customScrollbarThumb.addEventListener('pointerdown', (e) => {
+	e.stopPropagation();
+	sbDragging = true;
+	sbDragStartX = e.clientX;
+	sbDragStartScrollLeft = chartScrollEl.scrollLeft;
+	customScrollbarThumb.setPointerCapture(e.pointerId);
+	customScrollbarThumb.classList.add('dragging');
+});
+customScrollbarThumb.addEventListener('pointermove', (e) => {
+	if (!sbDragging) return;
+	const trackWidth = customScrollbarTrack.clientWidth;
+	const thumbWidth = customScrollbarThumb.offsetWidth;
+	const maxThumbLeft = Math.max(1, trackWidth - thumbWidth);
+	const viewport = currentViewportWidth || chartScrollEl.clientWidth;
+	const content = currentContentWidth || viewport;
+	const maxScroll = Math.max(1, content - viewport);
+
+	const deltaPx = e.clientX - sbDragStartX;
+	const deltaScroll = deltaPx * (maxScroll / maxThumbLeft);
+	chartScrollEl.scrollLeft = Math.max(0, Math.min(maxScroll, sbDragStartScrollLeft + deltaScroll));
+});
+function endSbDrag(e) {
+	if (!sbDragging) return;
+	sbDragging = false;
+	customScrollbarThumb.classList.remove('dragging');
+	try { customScrollbarThumb.releasePointerCapture(e.pointerId); } catch (err) {}
+}
+customScrollbarThumb.addEventListener('pointerup', endSbDrag);
+customScrollbarThumb.addEventListener('pointercancel', endSbDrag);
+
+// トラックの、つまみ以外の部分を押した場合は、そこへ直接ジャンプする
+customScrollbarTrack.addEventListener('pointerdown', (e) => {
+	if (e.target === customScrollbarThumb) return; // つまみ側で処理済み
+	const trackWidth = customScrollbarTrack.clientWidth;
+	const thumbWidth = customScrollbarThumb.offsetWidth;
+	const maxThumbLeft = Math.max(1, trackWidth - thumbWidth);
+	const viewport = currentViewportWidth || chartScrollEl.clientWidth;
+	const content = currentContentWidth || viewport;
+	const maxScroll = Math.max(1, content - viewport);
+
+	const rect = customScrollbarTrack.getBoundingClientRect();
+	const clickX = e.clientX - rect.left;
+	const targetThumbLeft = Math.max(0, Math.min(maxThumbLeft, clickX - thumbWidth / 2));
+	chartScrollEl.scrollLeft = (targetThumbLeft / maxThumbLeft) * maxScroll;
+});
+
 
 function scrollToPlayhead(absoluteX) {
 	const viewportWidth = chartScrollEl.clientWidth;
@@ -479,7 +554,7 @@ async function analyzeArrayBuffer(arrayBuffer, sourceBlob, label, target, { rese
 			fileSourceLabel = label;
 		}
 
-		setStatus('解析完了: ' + label + '(' + audioBuffer.duration.toFixed(2) + '秒)');
+		setStatus('解析完了: ' + trimFilename(label, 15) + '(' + audioBuffer.duration.toFixed(2) + '秒)');
 		layoutCanvas();
 	} catch (err) {
 		setStatus('解析できませんでした: ' + err.message, true);
@@ -569,6 +644,12 @@ function discardMicResult() {
 	layoutCanvas(); // オーバーレイキャンバスをクリア
 }
 
+function trimFilename(str, n) {
+	const noc = Math.floor((n - 3) / 2);
+	const additional = ((n % 2) == 0) ? 1 : 0;
+	return str.substr(0, noc+additional) + '...' + str.substr(-noc);
+}
+
 audioFileInput.addEventListener('change', async (e) => {
 	if (filePlayer.isPlaying()) filePlayer.stop(true);
 	const file = e.target.files[0];
@@ -577,7 +658,7 @@ audioFileInput.addEventListener('change', async (e) => {
 	// ファイルを読み込み時は、マイク録音キャンバスを破棄する
 	discardMicResult();
 
-	fileNameLabel.textContent = file.name;
+	fileNameLabel.textContent = trimFilename(file.name, 15);
 	const arrayBuffer = await file.arrayBuffer();
 	await analyzeArrayBuffer(arrayBuffer, file, file.name, 'file');
 });

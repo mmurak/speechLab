@@ -36,7 +36,43 @@ body {
 	overflow-x: auto;
 	overflow-y: hidden;
 	border-radius: 6px;
+	scrollbar-width: auto;
+	scrollbar-color: #33cfff var(--panel-border);
 }
+.chart-scroll::-webkit-scrollbar {
+	height: 16px;
+}
+.chart-scroll::-webkit-scrollbar-track {
+	background: var(--panel-border);
+	border-radius: 8px;
+}
+.chart-scroll::-webkit-scrollbar-thumb {
+	background: var(--accent);
+	border-radius: 8px;
+	border: 3px solid var(--panel-border);
+}
+.custom-scrollbar-track {
+	position: relative;
+	height: 16px;
+	margin-top: 8px;
+	background: var(--panel-border);
+	border-radius: 8px;
+	touch-action: none;
+}
+.custom-scrollbar-thumb {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 100%;
+	min-width: 24px;
+	background: #33cfff;
+	border-radius: 8px;
+	cursor: grab;
+}
+.custom-scrollbar-thumb.dragging {
+	cursor: grabbing;
+}
+
 .chart-spacer {
 	position: absolute;
 	top: 0;

@@ -36,20 +36,10 @@ body {
 	overflow-x: auto;
 	overflow-y: hidden;
 	border-radius: 6px;
-	scrollbar-width: auto;
-	scrollbar-color: #33cfff var(--panel-border);
+	scrollbar-width: none;
 }
 .chart-scroll::-webkit-scrollbar {
-	height: 16px;
-}
-.chart-scroll::-webkit-scrollbar-track {
-	background: var(--panel-border);
-	border-radius: 8px;
-}
-.chart-scroll::-webkit-scrollbar-thumb {
-	background: var(--accent);
-	border-radius: 8px;
-	border: 3px solid var(--panel-border);
+	display: none;
 }
 .custom-scrollbar-track {
 	position: relative;

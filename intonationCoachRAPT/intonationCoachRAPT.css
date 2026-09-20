@@ -325,14 +325,6 @@ button#recordBtn.recording::after {
 	opacity: 0.5;
 	pointer-events: none;
 }
-.file-name {
-	font-size: 13px;
-	color: var(--text-dim);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	flex: 1;
-}
 h1 {
 	font-size: 28px;
 	font-style: italic;

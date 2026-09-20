@@ -23,7 +23,6 @@ const lowFreqInput = document.getElementById('lowFreq');
 const highFreqInput = document.getElementById('highFreq');
 const audioFileInput = document.getElementById('audioFileInput');
 const fileButtonLabel = document.getElementById('fileButtonLabel');
-const fileNameLabel = document.getElementById('fileNameLabel');
 
 const CHART_MIN_HZ = 50;
 const CHART_MAX_HZ = 500;
@@ -660,7 +659,6 @@ audioFileInput.addEventListener('change', async (e) => {
 	// ファイルを読み込み時は、マイク録音キャンバスを破棄する
 	discardMicResult();
 
-	fileNameLabel.textContent = trimFilename(file.name, 15);
 	const arrayBuffer = await file.arrayBuffer();
 	await analyzeArrayBuffer(arrayBuffer, file, file.name, 'file');
 });

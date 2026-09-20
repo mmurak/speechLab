@@ -24,16 +24,13 @@
 					<div class="custom-scrollbar-thumb" id="customScrollbarThumb"></div>
 				</div>
 				<div class="legend">
-					<span>モデルの音の強さ(RMS): 弱 → 強</span>
+					<span>モデル音声（弱→強）</span>
 					<span class="legend-model-gradient"></span>&nbsp;
-					<span>録音の音の強さ(RMS): 弱 → 強</span>
+					<span>録音音声（弱→強）</span>
 					<span class="legend-mic-gradient"></span>&nbsp;
-					<label>下限 <input type="number" id="lowFreq" value="70" min="40" max="250" step="5"> Hz</label>
-					<label>上限 <input type="number" id="highFreq" value="350" min="150" max="600" step="5"> Hz</label>
+					<input type="number" id="lowFreq" value="70" min="40" max="250" step="5">Hz 〜<input type="number" id="highFreq" value="350" min="150" max="600" step="5">Hz
 				</div>
-				<div class="readout" id="status">録音するか、音声ファイルを選択してください</div>
 			</div>
-
 			<div class="controls">
 				<table>
 					<tr>
@@ -55,7 +52,7 @@
 							<button id="fileCsvBtn" class="csv-btn" hidden disabled>CSVを保存</button>
 						</td>
 						<td>
-							<span class="file-name" id="fileNameLabel"></span>
+							<span class="readout" id="status">録音するか、音声ファイルを選択してください</span>
 						</td>
 					</tr>
 					<tr>

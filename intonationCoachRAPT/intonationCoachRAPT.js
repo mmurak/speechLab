@@ -250,16 +250,18 @@ function renderFrame() {
 chartScrollEl.addEventListener('scroll', renderFrame);
 
 function updateCustomScrollbar() {
-	const trackWidth = customScrollbarTrack.clientWidth;
 	const viewport = currentViewportWidth || chartScrollEl.clientWidth;
 	const content = currentContentWidth || viewport;
 	const maxScroll = Math.max(0, content - viewport);
 
-	if (maxScroll <= 0 || trackWidth <= 0) {
+	if (maxScroll <= 0 || viewport <= 0) {
 		customScrollbarTrack.style.display = 'none';
 		return;
 	}
 	customScrollbarTrack.style.display = '';
+
+	const trackWidth = customScrollbarTrack.clientWidth;
+	if (trackWidth <= 0) return;
 
 	const thumbWidth = Math.max(24, (viewport / content) * trackWidth);
 	const maxThumbLeft = Math.max(0, trackWidth - thumbWidth);

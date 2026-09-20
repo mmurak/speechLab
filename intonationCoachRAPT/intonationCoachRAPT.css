@@ -18,7 +18,7 @@ html, body {
 	font-family: "Times New Roman", serif;
 }
 body {
-//	display: flex;
+	display: flex;
 	justify-content: center;
 	padding: 20px 20px;
 }
@@ -30,7 +30,6 @@ body {
 	border: 1px solid var(--panel-border);
 	border-radius: 10px;
 	padding: 20px;
-	width: 100%;
 }
 .chart-scroll {
 	position: relative;

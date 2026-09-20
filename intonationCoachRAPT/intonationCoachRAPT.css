@@ -18,7 +18,7 @@ html, body {
 	font-family: "Times New Roman", serif;
 }
 body {
-	display: flex;
+//	display: flex;
 	justify-content: center;
 	padding: 20px 20px;
 }
@@ -30,6 +30,7 @@ body {
 	border: 1px solid var(--panel-border);
 	border-radius: 10px;
 	padding: 20px;
+	width: 100%;
 }
 .chart-scroll {
 	position: relative;
@@ -40,8 +41,7 @@ body {
 	scrollbar-color: #33cfff var(--panel-border);
 }
 .chart-scroll::-webkit-scrollbar {
-	display: none;
-//	height: 16px;
+	height: 16px;
 }
 .chart-scroll::-webkit-scrollbar-track {
 	background: var(--panel-border);
@@ -59,7 +59,7 @@ body {
 	background: var(--panel-border);
 	border-radius: 8px;
 	touch-action: none;
-	border: 2px solid red;
+	width: 100%;
 }
 .custom-scrollbar-thumb {
 	position: absolute;

@@ -218,7 +218,7 @@ function timeToX(t) {
 // キャンバス（表示領域と同じ小さいサイズ）とスペーサー（音声全体ぶんの幅）を
 // 必要に応じて再設定し、現在のスクロール位置に合わせて再描画する。
 function layoutAndRender() {
-	const containerHeight = UI.pitchScrollContainer.clientHeight || 200;
+	const containerHeight = UI.pitchScrollContainer.clientHeight || 280;
 	const containerWidth = UI.pitchScrollContainer.clientWidth || 300;
 	const totalDuration = computeTotalDuration();
 	const spacerWidth = Math.max(containerWidth, PLOT_ORIGIN_X + totalDuration * PIXELS_PER_SECOND);

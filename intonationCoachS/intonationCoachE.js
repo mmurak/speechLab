@@ -1,4 +1,4 @@
-import { SwiftF0model } from '../../SwiftF0model/SwiftF0model.js';
+import { SwiftF0model } from '../SwiftF0model/SwiftF0model.js';
 import { LiteralsManager } from './LiteralsManager.js';
 
 const paramObj = Object.fromEntries(new URLSearchParams(window.location.search));

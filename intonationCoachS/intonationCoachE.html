@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8">
+		<title>Intonation Coach/Embeded</title>
+		<style>
+body {
+	font-family: sans-serif;
+	margin: 10px;
+	background: #121212;
+	color: #fff;
+}
+.container {
+	max-width: 100%;
+	margin: auto;
+}
+
+#status {
+	font-size: 0.9em;
+	color: #aaa;
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* 1・2行目: ファイル / マイクのコントロール（列を揃える） */
+.control-grid {
+	display: grid;
+	grid-template-columns: auto auto auto auto;
+	column-gap: 18px;
+	row-gap: 5px;
+	align-items: center;
+	margin-bottom: 8px;
+}
+.pitch-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9em;
+	color: #aaa;
+	white-space: nowrap;
+}
+.pitch-controls label {
+	cursor: pointer;
+	user-select: none;
+}
+.pitch-controls label:hover {
+	color: #fff;
+	text-decoration: underline;
+}
+.speed-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9em;
+	color: #aaa;
+	white-space: nowrap;
+}
+.speed-controls span {
+	min-width: 3.6em;
+	display: inline-block;
+}
+.swatch {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	display: inline-block;
+	flex-shrink: 0;
+}
+.swatch-file { background: rgb(51, 207, 255); }
+.swatch-mic { background: rgb(255, 184, 77); }
+
+button, input[type="file"] {
+	padding: 8px 12px;
+	background: #333;
+	color: #fff;
+	border: 1px solid #555;
+	cursor: pointer;
+	border-radius: 4px;
+}
+button:hover {
+	background: #444;
+}
+button:disabled, input:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+input[type="range"] {
+	cursor: pointer;
+}
+
+/* 埋め込みモード（区間エディタ等からダイアログ/iframeとして起動された場合）:
+   ファイルはpostMessageで渡された音声データを直接分析するため、
+   ファイル選択インプットは表示せず、レイアウトの列位置だけ維持する。 */
+body.embedded #audioFile {
+	visibility: hidden;
+}
+
+/* 3行目: チャート + 右端の録音ボタン */
+.chart-row {
+	display: flex;
+	align-items: stretch;
+	gap: 10px;
+	margin-bottom: 6px;
+}
+.chart-column {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+#pitchChartScrollContainer {
+	position: relative;
+	overflow-x: auto;
+	overflow-y: hidden;
+	border: 1px solid #444;
+	background: #1e1e1e;
+	height: 200px;
+	/* 自前の太いスクロールバー(下記)に一本化するため、ネイティブのものは隠す。
+	   Android等のタッチ環境ではネイティブの横スクロールバーが細いオーバーレイに
+	   なりCSSでの太さ変更がほぼ効かないため、代わりに#pitchScrollbarTrackを使う。 */
+	scrollbar-width: none;
+}
+#pitchChartScrollContainer::-webkit-scrollbar {
+	display: none;
+}
+/* スクロール可能な範囲（音声の総時間ぶん）だけを確保するための透明なスペーサー。
+   実際に描画するキャンバスはこの上に固定サイズで重ねて表示する（仮想スクロール）。 */
+#pitchScrollSpacer {
+	height: 1px;
+}
+#pitchPlotWrapper {
+	position: absolute;
+	top: 0;
+	left: 0;
+	will-change: transform;
+}
+#pitchCanvas {
+	display: block;
+	touch-action: none;
+	user-select: none;
+	cursor: default;
+}
+/* 自前の太いスクロールバー。スマホ等のタッチ操作でも掴みやすいサイズにしてある。 */
+#pitchScrollbarTrack {
+	position: relative;
+	height: 26px;
+	margin-top: 6px;
+	background: #2a2a2a;
+	border: 1px solid #444;
+	border-radius: 13px;
+	touch-action: none;		/* トラック上のジェスチャーは全てJSでスクロール処理するため */
+	cursor: pointer;
+}
+#pitchScrollbarThumb {
+	position: absolute;
+	top: 3px;
+	left: 0;
+	height: 18px;
+	min-width: 44px;
+	background: #777;
+	border-radius: 9px;
+	cursor: grab;
+	touch-action: none;
+}
+#pitchScrollbarThumb:hover {
+	background: #888;
+}
+#pitchScrollbarThumb.dragging {
+	background: #999;
+	cursor: grabbing;
+}
+.record-btn {
+	flex: 0 0 auto;
+	width: 92px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	line-height: 1.4;
+	font-size: 0.95em;
+	touch-action: none;	
+	user-select: none;
+}
+.record-btn.active {
+	background: #a33;
+	border-color: #d55;
+	color: #fff;
+}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<!-- 1・2行目: ファイル / マイクのコントロール -->
+			<div class="control-grid">
+				<!-- ファイル -->
+				<input type="file" id="audioFile" accept="audio/*" hidden>
+				<div id="status">モデルを初期化中...</div>
+				<div class="pitch-controls">
+					<span class="swatch swatch-file"></span>
+					<label id="confLabel" for="confThreshold" title="クリックしてデフォルト値(0.90)に戻す">信頼度 ≧: </label>
+					<span id="confValue"></span>
+					<input type="range" id="confThreshold" min="0" max="0.99" step="0.01" value="0.90">
+				</div>
+				<button id="playPauseBtn" disabled>💿再生</button>
+				<div class="speed-controls">
+					<label id="speedLabel" for="fileSpeedSlider">速度:</label>
+					<input type="range" id="fileSpeedSlider" min="0.2" max="1.0" step="0.05" value="1.0" disabled>
+					<span id="fileSpeedValue">1.00x</span>
+				</div>
+
+				<!-- マイク（列は上のファイル行に揃える） -->
+				<div></div>
+				<div class="pitch-controls">
+					<span class="swatch swatch-mic"></span>
+					<label id="confLabelMic" for="confThresholdMic" title="クリックしてデフォルト値(0.90)に戻す">信頼度 ≧: </label>
+					<span id="confValueMic"></span>
+					<input type="range" id="confThresholdMic" min="0" max="0.99" step="0.01" value="0.90">
+				</div>
+				<button id="micPlayPauseBtn" disabled>🎤再生</button>
+				<div class="speed-controls">
+					<label id="speedLabelMic" for="micSpeedSlider">速度:</label>
+					<input type="range" id="micSpeedSlider" min="0.2" max="1.0" step="0.05" value="1.0" disabled>
+					<span id="micSpeedValue">1.00x</span>
+				</div>
+			</div>
+
+			<!-- 3行目: チャート + 録音ボタン -->
+			<div class="chart-row">
+				<div class="chart-column">
+					<div id="pitchChartScrollContainer">
+						<div id="pitchScrollSpacer"></div>
+						<div id="pitchPlotWrapper">
+							<canvas id="pitchCanvas"></canvas>
+						</div>
+					</div>
+					<div id="pitchScrollbarTrack">
+						<div id="pitchScrollbarThumb"></div>
+					</div>
+				</div>
+				<button id="recordBtn" class="record-btn" disabled>🔴<br>待機中</button>
+			</div>
+
+			<!-- 再生用のaudio要素（iOS/iPadOS等での再生安定性のため、DOMに実在させておく） -->
+			<audio id="filePlayerElement" preload="auto"></audio>
+			<audio id="micPlayerElement" preload="auto"></audio>
+		</div>
+		<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+		<script type="module" src="./intonationCoachE.js"></script>
+	</body>
+</html>

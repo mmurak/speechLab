@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+		<title>Intonation Coach S</title>
+		<link rel="shortcut icon" href="./intonationCoachT/Kiwi-bird-green.png">
+		<link rel="stylesheet" href="./intonationCoachS/intonationCoachS.css">
+	</head>
+	<body>
+		<div class="wrap">
+			<div class="bar">
+				<label class="filebtn">ファイル<input id="file" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.aac,.webm,.mp4,.mkv"></label>
+				<button id="playStop" class="primary" disabled>再生</button>
+				<span class="meta" id="meta">ファイル未読み込み</span>
+				<span class="spacer"></span>
+				<button id="zin" disabled>拡大</button>
+				<button id="zout" disabled>縮小</button>
+				<button id="zall" disabled>全体表示</button>
+			</div>
+
+			<div class="stage">
+				<canvas id="cv"></canvas>
+				<div class="sbwrap"><div id="sb"><div id="sbin"></div></div></div>
+			</div>
+
+			<div id="list"><p class="empty">ハンドルを追加すると、その間が区間として表示されます。</p></div>
+		</div>
+
+		<dialog id="icDialog">
+			<div class="ic-dialog-inner">
+				<div class="ic-dialog-head">
+					<span id="icDialogTitle">区間を分析</span>
+					<button id="icDialogClose">閉じる</button>
+				</div>
+				<div id="icLoading">Intonation Coach/T を読み込み中…</div>
+				<iframe id="icFrame" title="Intonation Coach/T" hidden></iframe>
+			</div>
+		</dialog>
+
+		<script src="./intonationCoachS/intonationCoachS.js"></script>
+	</body>
+</html>

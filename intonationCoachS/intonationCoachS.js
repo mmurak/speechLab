@@ -187,8 +187,24 @@ function zoomAt(factor, anchorX) {
 	clampView();
 	layout();
 }
-$('zin').onclick  = () => zoomAt(1/1.6, cv.clientWidth/2);
-$('zout').onclick = () => zoomAt(1.6,   cv.clientWidth/2);
+// 指定した時刻tが画面中央に来るようにズームする（ファイルの先頭/末尾付近では
+// clampViewにより中央にしきれず、そちら側に寄った状態になる）。
+function zoomAtTime(factor, t) {
+	viewDur = Math.min(duration, Math.max(MINDUR, viewDur * factor));
+	viewStart = t - viewDur / 2;
+	clampView();
+	layout();
+}
+// 拡大縮小ボタンの基準にする時刻。再生中はカーソル（再生位置）の時刻、
+// 再生していなければこれまで通り画面中央の時刻を使う。
+function zoomAnchorTime() {
+	if (playing) {
+		return Math.min(playTo, playFrom + (audioCtx.currentTime - playAt));
+	}
+	return x2t(cv.clientWidth / 2);
+}
+$('zin').onclick  = () => zoomAtTime(1/1.6, zoomAnchorTime());
+$('zout').onclick = () => zoomAtTime(1.6,   zoomAnchorTime());
 $('zall').onclick = () => { viewStart = 0; viewDur = duration; layout(); };
 
 /* ---------- スクロールバー ---------- */

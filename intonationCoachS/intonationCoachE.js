@@ -420,6 +420,10 @@ async function initModel() {
 	} catch (err) {
 		console.error(err);
 		UI.statusDiv.textContent = LITERALS.get('statusInitError');
+		if (EMBEDDED && window.parent && window.parent !== window) {
+			// 'ic-ready' が永遠に届かないと親側が待ち続けてしまうので、失敗も明示的に知らせる。
+			window.parent.postMessage({ type: 'ic-init-error' }, '*');
+		}
 	}
 }
 initModel();
@@ -558,13 +562,36 @@ async function analyzeMonoPCM(monoSamples, nativeRate) {
  * samples は Float32Array のバッキングバッファ（transferable）。
  * ファイルを読み込むのではなく、受け取った音声データをそのまま分析対象にする。
  * ********************************************************************************/
+let analysisBusy = false;			// 現在analyzeMonoPCM()実行中かどうか
+let queuedSegment = null;			// 処理中に届いた場合、最新の1件だけを覚えておく（古いものは捨てる）
+
 async function handleIncomingSegment(sampleRate, floatSamples) {
 	if (!session) {
 		// モデルの初期化がまだなら、準備でき次第処理できるよう保持しておく。
 		pendingSegment = { sampleRate, samples: floatSamples };
 		return;
 	}
+	if (analysisBusy) {
+		// 前の分析がまだ終わっていない状態で新しいリクエストが来た場合、同時に
+		// session.run()を走らせるとお互いを壊しかねないので、ここでは受け付けずに
+		// 「最新の1件」だけ覚えておき、今の処理が終わってから続けて処理する。
+		queuedSegment = { sampleRate, samples: floatSamples };
+		return;
+	}
+	analysisBusy = true;
+	try {
+		await runSegmentAnalysis(sampleRate, floatSamples);
+	} finally {
+		analysisBusy = false;
+	}
+	if (queuedSegment) {
+		const next = queuedSegment;
+		queuedSegment = null;
+		handleIncomingSegment(next.sampleRate, next.samples);
+	}
+}
 
+async function runSegmentAnalysis(sampleRate, floatSamples) {
 	stopFilePlayback();
 	clearMicComparison();
 	fileAnalysisData = null;

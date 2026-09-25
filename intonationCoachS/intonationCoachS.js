@@ -723,6 +723,9 @@ const icLoading = $('icLoading');
 let icFrameLoaded = false;
 let icReady = false;
 let icPendingSegment = null;
+let icInitFailed = false;			// iframe側のモデル初期化が失敗したことが分かっている場合 true
+let icReadyTimeoutId = null;		// ic-ready を待つタイムアウト（無反応のまま固まるのを防ぐ）
+const IC_READY_TIMEOUT_MS = 20000;
 
 // Int16スケールの区間データを、Intonation Coach/T側の想定(Float32 PCM)に
 // 変換してから渡す。区間は最大30秒（checkLengthLimit）なので変換コストは小さい。
@@ -735,6 +738,20 @@ function sliceSegmentSamples(i) {
 		f32[k] = samples[a + k] / PK_SCALE;
 	}
 	return f32;
+}
+
+function showIcMessage(text) {
+	icLoading.style.display = '';
+	icLoading.textContent = text;
+}
+
+function armIcReadyTimeout() {
+	clearTimeout(icReadyTimeoutId);
+	icReadyTimeoutId = setTimeout(() => {
+		if (!icReady && !icInitFailed) {
+			showIcMessage('分析モジュールの準備に時間がかかっています。回線状況を確認するか、しばらくしてからもう一度お試しください。');
+		}
+	}, IC_READY_TIMEOUT_MS);
 }
 
 function openAnalysisDialog(i) {
@@ -751,10 +768,18 @@ function openAnalysisDialog(i) {
 		icFrame.hidden = false;
 	}
 
+	if (icInitFailed) {
+		// 初期化が失敗したことが既に分かっている場合、無駄に待たせずすぐ知らせる
+		showIcMessage('分析モジュールの初期化に失敗しました。ページを再読み込みしてからもう一度お試しください。');
+		icDialog.showModal();
+		return;
+	}
+
 	if (icReady) {
 		postSegmentToFrame(segment);
 	} else {
 		icPendingSegment = segment; // ic-ready が来たら送る
+		armIcReadyTimeout();
 	}
 	icDialog.showModal();
 }
@@ -768,7 +793,18 @@ function postSegmentToFrame(segment) {
 
 window.addEventListener('message', (e) => {
 	const data = e.data;
-	if (!data || data.type !== 'ic-ready' || e.source !== icFrame.contentWindow)  return;
+	if (!data || e.source !== icFrame.contentWindow)  return;
+
+	if (data.type === 'ic-init-error') {
+		// 'ic-ready' が永遠に届かず待ち続けてしまうのを防ぐ。以後の分析要求にも即座に知らせる。
+		icInitFailed = true;
+		clearTimeout(icReadyTimeoutId);
+		showIcMessage('分析モジュールの初期化に失敗しました。ページを再読み込みしてからもう一度お試しください。');
+		return;
+	}
+
+	if (data.type !== 'ic-ready')  return;
+	clearTimeout(icReadyTimeoutId);
 	icReady = true;
 	if (icPendingSegment) {
 		const seg = icPendingSegment;
@@ -783,7 +819,7 @@ $('icDialogClose').onclick = () => icDialog.close();
 icDialog.addEventListener('cancel', () => {}); // Escで閉じるのはそのまま許可
 icDialog.addEventListener('close', () => {
 	// close/cancel いずれでも 'close' イベントは発火するので、ここ一箇所で
-	// iframe側へ「一時停止しろ」と伝える（再生停止・再生用URLの解放）。
+	// iframe側へ「一時停止して」と伝える（再生停止・再生用URLの解放）。
 	icFrame.contentWindow?.postMessage({ type: 'ic-suspend' }, '*');
 });
 

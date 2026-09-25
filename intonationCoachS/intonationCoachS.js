@@ -196,12 +196,12 @@ function zoomAtTime(factor, t) {
 	layout();
 }
 // 拡大縮小ボタンの基準にする時刻。再生中はカーソル（再生位置）の時刻、
-// 再生していなければこれまで通り画面中央の時刻を使う。
+// 再生していなければ現在選択中のハンドル（開いた直後は先頭ハンドル＝0秒）の時刻を使う。
 function zoomAnchorTime() {
 	if (playing) {
 		return Math.min(playTo, playFrom + (audioCtx.currentTime - playAt));
 	}
-	return x2t(cv.clientWidth / 2);
+	return (handles.length > 0) ? handles[sel].t : x2t(cv.clientWidth / 2);
 }
 $('zin').onclick  = () => zoomAtTime(1/1.6, zoomAnchorTime());
 $('zout').onclick = () => zoomAtTime(1.6,   zoomAnchorTime());

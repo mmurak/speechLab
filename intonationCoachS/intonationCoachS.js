@@ -26,7 +26,6 @@ let playFrom = 0;
 let playTo = 0;
 let playing = false;
 let followAnchor = 0.5;
-let scrollingActive = true;
 let uid = 1;
 
 /* ---------- 読み込み → モノラル化 → 16kHz → Int16化 ---------- */
@@ -631,15 +630,9 @@ function playRegion(i){
 	src.onended = () => {
 		if (playing)  stop();
 	};
-	// 再生開始の瞬間だけ、開始点・終了点の可視状態を見て一度だけ判定する。
-	// 両方すでに見えているならスクロール不要（カーソルのみ動く）。
-	// 開始点だけ見えているならその位置を、どちらも見えていなければ中央を基準にし、
-	// 以後は再生が終わるかファイル末尾に達するまでスクロールを続ける
-	// （区間の終了点が画面に入ってきても、そこでは止めない）。
-	const startVisible0 = from >= viewStart - EPS && from <= viewStart + viewDur + EPS;
-	const endVisible0   = to   >= viewStart - EPS && to   <= viewStart + viewDur + EPS;
-	scrollingActive = !(startVisible0 && endVisible0);
-	followAnchor = startVisible0 ? Math.min(1, Math.max(0, t2x(from) / cv.clientWidth)) : 0.5;
+	// 追従の判定はここでは行わず、follow() の初回呼び出しに任せる（毎フレーム
+	// 状況を見て決め直せるようにするため。手動パン/ズーム後にも正しく動くように）。
+	followState = 'none';
 	playFrom = from;
 	playTo = to;
 	playAt = c.currentTime;
@@ -654,14 +647,41 @@ function tick() {
 	draw();
 	requestAnimationFrame(tick);
 }
-// 再生位置を追従させる。スクロールするかどうか・アンカー位置は再生開始時に一度だけ
-// playRegion() で決めてあり、ここでは毎フレーム再判定しない（区間の終了点が画面に
-// 入ってきても止めない）。スクロールはファイル自体の終端（clampView）に達したところで
-// 頭打ちになり、それ以降はカーソルだけが動く。
+// 再生位置への追従。ファイル自体の終端が画面内に見えている間はスクロール不要
+// （カーソルだけが動く）。見えていない場合、カーソルが既に画面中央以降（中央〜右側）に
+// あればその位置を基準に即座にスクロール追従を開始する。カーソルが画面内の左半分
+// （画面より左側も含む）にある場合は、波形をスクロールで動かすのではなく、時間経過に
+// 任せてカーソルが自然に画面中央まで進んでくるのを待ち、中央に達した時点でスクロール
+// 追従に切り替える。
 const EPS = 1e-9;
+let followState = 'none'; // 'none'（未判定/終端可視でスクロール不要）| 'waiting'（中央到達待ち）| 'locked'（追従中）
 function follow() {
-	if (!scrollingActive)  return;
 	const t = Math.min(playTo, playFrom + (audioCtx.currentTime - playAt));
+
+	if (viewStart + viewDur >= duration - EPS) {
+		// ファイル終端が見えているならスクロール不要。見えなくなった時点で
+		// （再生開始時に限らず、手動パン/ズームの結果としても）また判定し直す。
+		followState = 'none';
+		return;
+	}
+
+	if (followState === 'none') {
+		const x = t2x(t);
+		if (x < cv.clientWidth / 2) {
+			followState = 'waiting'; // 画面内の左半分（画面より左も含む）：中央到達までスクロールしない
+		} else {
+			followAnchor = Math.min(1, Math.max(0, x / cv.clientWidth));
+			followState = 'locked'; // 中央以降（右半分）：今の位置からすぐ追従開始
+		}
+		return; // 判定した回はまだスクロールしない
+	}
+
+	if (followState === 'waiting') {
+		if (t2x(t) < cv.clientWidth / 2)  return; // 中央未到達。スクロールしない
+		followAnchor = 0.5;
+		followState = 'locked';
+	}
+
 	const want = t - followAnchor * viewDur;
 	if (Math.abs(want - viewStart) < 1e-6)  return;
 	viewStart = want;
@@ -837,6 +857,10 @@ icDialog.addEventListener('close', () => {
 	// close/cancel いずれでも 'close' イベントは発火するので、ここ一箇所で
 	// iframe側へ「一時停止して」と伝える（再生停止・再生用URLの解放）。
 	icFrame.contentWindow?.postMessage({ type: 'ic-suspend' }, '*');
+});
+
+$('helpBtn').addEventListener('click', () => {
+	window.open('./intonationCoachS/help.html', '_blank');
 });
 
 layout();

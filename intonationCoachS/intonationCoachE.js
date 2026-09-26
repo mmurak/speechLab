@@ -779,7 +779,34 @@ function stopFilePlayback() {
 	if (!audioEl.paused) audioEl.pause();
 }
 
-UI.playPauseBtn.addEventListener('click', () => {
+// ボタンを長押し(holdMs以上)した場合はonLongPressを、そうでなく普通にタップ/
+// クリックした場合はonTapを呼ぶ。長押しが発火した後に続くclickイベントは
+// 二重処理にならないよう1回だけ無視する。
+function setupPressAndHold(btn, { onTap, onLongPress, holdMs = 500 }) {
+	let timer = null;
+	let suppressClick = false;
+	const cancelHold = () => { clearTimeout(timer); timer = null; };
+	btn.addEventListener('pointerdown', () => {
+		cancelHold();
+		timer = setTimeout(() => {
+			timer = null;
+			suppressClick = true;
+			onLongPress();
+		}, holdMs);
+	});
+	btn.addEventListener('pointerup', cancelHold);
+	btn.addEventListener('pointerleave', cancelHold);
+	btn.addEventListener('pointercancel', cancelHold);
+	btn.addEventListener('click', () => {
+		if (suppressClick) {
+			suppressClick = false; // 長押しで既に処理済みなので、通常のタップ処理はスキップ
+			return;
+		}
+		onTap();
+	});
+}
+
+function toggleFilePlayback() {
 	if (!fileAnalysisData) return;
 	tryResumeAudioContexts();
 	if (!audioEl.paused) {
@@ -792,7 +819,16 @@ UI.playPauseBtn.addEventListener('click', () => {
 		}
 		audioEl.play();
 	}
-});
+}
+function restartFilePlayback() {
+	// 長押し: 一時停止中かどうかに関わらず、必ず先頭から再生し直す
+	if (!fileAnalysisData) return;
+	tryResumeAudioContexts();
+	stopMicPlayback();
+	audioEl.currentTime = 0;
+	audioEl.play();
+}
+setupPressAndHold(UI.playPauseBtn, { onTap: toggleFilePlayback, onLongPress: restartFilePlayback });
 
 audioEl.addEventListener('play', () => {
 	UI.playPauseBtn.textContent = LITERALS.get('pause');
@@ -1110,7 +1146,7 @@ function stopMicPlayback() {
 	if (!micAudioEl.paused) micAudioEl.pause();
 }
 
-UI.micPlayPauseBtn.addEventListener('click', () => {
+function toggleMicPlayback() {
 	if (!micObjectURL) return;
 	tryResumeAudioContexts();
 	if (!micAudioEl.paused) {
@@ -1123,7 +1159,16 @@ UI.micPlayPauseBtn.addEventListener('click', () => {
 		}
 		micAudioEl.play();
 	}
-});
+}
+function restartMicPlayback() {
+	// 長押し: 一時停止中かどうかに関わらず、必ず先頭から再生し直す
+	if (!micObjectURL) return;
+	tryResumeAudioContexts();
+	stopFilePlayback();
+	micAudioEl.currentTime = 0;
+	micAudioEl.play();
+}
+setupPressAndHold(UI.micPlayPauseBtn, { onTap: toggleMicPlayback, onLongPress: restartMicPlayback });
 
 micAudioEl.addEventListener('play', () => {
 	UI.micPlayPauseBtn.textContent = LITERALS.get('pauseMicRec');

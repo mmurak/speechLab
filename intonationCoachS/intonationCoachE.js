@@ -173,19 +173,58 @@ const micAudioEl = document.getElementById('micPlayerElement');
 function createSmoothedClock(mediaEl) {
 	let lastMediaTime = 0;
 	let lastWallTime = 0;
+	let lastReturned = 0;
 	let hasTick = false;
+	let wasPlaying = false; // 直前の呼び出し時点で再生中だったか
+	// これを超える後退は「新しい区間の読み込み」や「本物のシーク」とみなし、
+	// そのまま反映する（このしきい値未満の後退だけを、再生開始直後などに起きる
+	// ブラウザ側の一瞬の巻き戻りとみなして無視する）。
+	const MAX_BACK_JITTER = 0.1;
+
 	return function getSmoothedTime() {
 		const raw = mediaEl.currentTime;
 		const now = performance.now();
-		if (!hasTick || raw !== lastMediaTime || mediaEl.paused) {
+		const playingNow = !mediaEl.paused;
+
+		if (!hasTick || !playingNow) {
+			// 一時停止中・まだ一度も呼ばれていない場合はそのまま実値を返す
+			// （手動でのシーク・巻き戻しはここを通るので、後退ガードの対象外にする）。
 			lastMediaTime = raw;
 			lastWallTime = now;
+			lastReturned = raw;
 			hasTick = true;
+			wasPlaying = false;
+			return raw;
+		}
+
+		if (!wasPlaying) {
+			// 一時停止→再生に切り替わった直後の最初の呼び出し。ここで
+			// 「待っていた間の経過時間」により補間すると過大に進んでしまうため、
+			// 実値をそのまま使い、経過時間の起点をここでリセットする。
+			lastMediaTime = raw;
+			lastWallTime = now;
+			lastReturned = raw;
+			wasPlaying = true;
+			return raw;
+		}
+
+		if (raw !== lastMediaTime) {
+			lastMediaTime = raw;
+			lastWallTime = now;
+			if (raw < lastReturned && (lastReturned - raw) < MAX_BACK_JITTER) {
+				return lastReturned; // ごく僅かな後退は無視する
+			}
+			lastReturned = raw; // それ以外（新しい区間・本物のシーク等）はそのまま採用する
 			return raw;
 		}
 		// currentTimeの実更新が来るまでの「つなぎ」。ブレが大きくなりすぎないよう上限を設ける。
 		const elapsedSec = Math.min((now - lastWallTime) / 1000, 0.35);
-		return lastMediaTime + elapsedSec * mediaEl.playbackRate;
+		const extrapolated = lastMediaTime + elapsedSec * mediaEl.playbackRate;
+		if (extrapolated < lastReturned && (lastReturned - extrapolated) < MAX_BACK_JITTER) {
+			return lastReturned;
+		}
+		lastReturned = extrapolated;
+		return extrapolated;
 	};
 }
 const getFileTime = createSmoothedClock(audioEl);

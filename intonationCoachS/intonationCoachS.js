@@ -6,6 +6,10 @@ const sb = document.getElementById('sb');
 const sbin = document.getElementById('sbin');
 const $ = id => document.getElementById(id);
 
+const params = new URLSearchParams(window.location.search);
+const strLimit = params.get('limit') ?? '30';
+const MAXSEC = Number(strLimit);
+
 // メモリ削減のため、音声本体は Int16（PK_SCALE 倍したスケール整数）で保持する。
 // Web Audio の AudioBuffer が要求する Float32 は、再生・書き出し時に必要な
 // 区間ぶんだけ都度その場で変換して作る（常時Float32で全体を持たない）。
@@ -741,7 +745,6 @@ function renderList() {
 }
 
 function checkLengthLimit(i) {
-	const MAXSEC = 30;
 	if (handles[i + 1].t - handles[i].t >= MAXSEC) {
 		alert(`分析対象は${MAXSEC}秒までにしてください。`);
 		return -1;

@@ -279,6 +279,11 @@ function layoutAndRender() {
 	updateScrollbarThumb();
 }
 layoutAndRender();
+// ダイアログ/iframeとして開かれた直後は、周囲のレイアウトがまだ確定しておらず、
+// この最初の呼び出しでのclientWidth/clientHeightの計測が不正確なことがある
+// （初回だけチャートが正しく描画されない不具合の原因）。レイアウトが確実に
+// 済んだ後でもう一度測り直す（ダブルrAFで最低1フレーム分の反映を待つ）。
+requestAnimationFrame(() => requestAnimationFrame(layoutAndRender));
 
 let resizeTimeoutId = null;
 function scheduleResize() {
